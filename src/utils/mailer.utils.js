@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import ENV from "../config/env.config.js";
 
 export const sendEmail = async (to, subject, text) => {
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = new Resend(ENV.RESEND_API_KEY);
 
   const html = `
     <!DOCTYPE html>
@@ -51,15 +51,13 @@ export const sendEmail = async (to, subject, text) => {
           <p>
             We're reaching out regarding an important update. Please review the details below:
           </p>
-          <p>
-            [Insert specific content or actionable info here]
-          </p>
+          <p>${text}</p>
           <p>
             If you have any questions or need assistance, feel free to reach out to our support team.
           </p>
           <p>
             Best regards,<br/>
-            The Team
+           Talha Bilal
           </p>
           <div class="footer">
             &copy; ${new Date().getFullYear()} Your Company. All rights reserved.

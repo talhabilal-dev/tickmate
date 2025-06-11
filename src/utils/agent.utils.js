@@ -1,11 +1,11 @@
 import { createAgent, gemini } from "@inngest/agent-kit";
-import Env from "../config/env.config.js";
+import ENV from "../config/env.config.js";
 
 const analyzeTicket = async (ticket) => {
   const supportAgent = createAgent({
     model: gemini({
       model: "gemini-1.5-flash-8b",
-      apiKey: Env.GEMINI_API_KEY,
+      apiKey: ENV.GEMINI_API_KEY,
     }),
     name: "AI Ticket Triage Assistant",
     system: `You are an expert AI assistant that processes technical support tickets. 

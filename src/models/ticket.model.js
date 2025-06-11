@@ -6,7 +6,7 @@ const TicketSchema = new Schema(
     description: { type: String, required: true },
     status: {
       type: String,
-      enum: ["open", "in_progress", "closed"],
+      enum: ["todo", "in_progress", "completed"],
       default: "open",
       required: true,
     },

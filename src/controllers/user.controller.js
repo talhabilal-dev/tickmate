@@ -76,6 +76,8 @@ export const login = async (req, res) => {
       }
     );
 
+    user.password = undefined;
+
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
@@ -113,17 +115,22 @@ export const logout = async (req, res) => {
   }
 };
 
-export const updateUser = async (req, res) => {
+export const updateSkills = async (req, res) => {
   const { skills, role } = req.body;
 
+  console.log(skills);
   try {
     if (!req.user?.userId) {
       return res.status(401).json({ message: "Unauthorized", success: false });
     }
 
-    if (req.user.role !== "admin") {
+    if (role && req.user.role !== "user") {
       return res.status(403).json({ message: "Forbidden", success: false });
     }
+
+    // if (req.user.role !== "admin") {
+    //   return res.status(403).json({ message: "Forbidden", success: false });
+    // }
 
     const existingUser = await userModel.findById(req.user.userId);
     if (!existingUser) {
@@ -132,11 +139,12 @@ export const updateUser = async (req, res) => {
         .json({ message: "User not found", success: false });
     }
 
-    const updatedUser = await userModel.updateOne(
-      { _id: req.user?.userId },
-      { skills: skills.length ? skills : existingUser.skills, role },
+    const updatedUser = await userModel.findByIdAndUpdate(
+      req.user.userId,
+      { skills: skills ? skills : existingUser.skills },
       { new: true }
     );
+
     return res.status(200).json({
       user: updatedUser,
       success: true,
@@ -152,23 +160,62 @@ export const updateUser = async (req, res) => {
   }
 };
 
+export const updateUser = async (req, res) => {
+  try {
+    const { fullName, email } = req.body;
+
+    if (!req.user?.userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
+    }
+
+    if (req.user.role !== "user") {
+      return res.status(403).json({ message: "Forbidden", success: false });
+    }
+
+    const existingUser = await userModel.findById(req.user.userId);
+    if (!existingUser) {
+      return res
+        .status(404)
+        .json({ message: "User not found", success: false });
+    }
+
+    const updatedUser = await userModel.findByIdAndUpdate(
+      req.user.userId,
+      {
+        name: fullName ? fullName : existingUser.name,
+        email: email ? email : existingUser.email,
+      },
+      { new: true }
+    );
+    return res.status(200).json(
+      res.status(200).json({
+        user: updatedUser,
+        success: true,
+        message: "User updated successfully",
+      })
+    );
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const getUser = async (req, res) => {
   try {
     if (!req.user?.userId) {
       return res.status(401).json({ message: "Unauthorized", success: false });
     }
 
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden", success: false });
-    }
-
-    const users = await userModel.find();
-    if (!users) {
+    const user = await userModel.findById(req.user.userId);
+    if (!user) {
       return res
         .status(404)
-        .json({ message: "Failed to get users", success: false });
+        .json({ message: "Failed to get user", success: false });
     }
-    return res.status(200).json({ users, success: true });
+    return res.status(200).json({ user, success: true });
   } catch (error) {
     console.error("Error in getUser:", error);
     res.status(500).json({

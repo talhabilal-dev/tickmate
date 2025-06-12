@@ -21,7 +21,7 @@ export const onUserSignup = inngest.createFunction(
         await sendEmail(
           user.email,
           "Welcome to TickMate",
-          `Hi ${user.name}, we are happy to have you on board!`
+          `Hi ${user.name}, This is a welcome email from TickMate`
         );
       });
 

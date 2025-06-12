@@ -20,7 +20,7 @@ export const onTicketCreated = inngest.createFunction(
       });
 
       await step.run("update-ticket-status", async () => {
-        await Ticket.findByIdAndUpdate(ticket._id, { status: "TODO" });
+        await Ticket.findByIdAndUpdate(ticket._id, { status: "todo" });
       });
 
       const aiResponse = await analyzeTicket(ticket);
@@ -62,10 +62,10 @@ export const onTicketCreated = inngest.createFunction(
         return user;
       });
 
-      await setp.run("send-email-notification", async () => {
+      await step.run("send-email-notification", async () => {
         if (moderator) {
           const finalTicket = await Ticket.findById(ticket._id);
-          await sendMail(
+          await sendEmail(
             moderator.email,
             "Ticket Assigned",
             `A new ticket is assigned to you ${finalTicket.title}`

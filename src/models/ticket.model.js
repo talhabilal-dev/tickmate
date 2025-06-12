@@ -7,9 +7,10 @@ const TicketSchema = new Schema(
     status: {
       type: String,
       enum: ["todo", "in_progress", "completed"],
-      default: "open",
+      default: "todo",
       required: true,
     },
+    category: { type: String, required: true },
     priority: {
       type: String,
       enum: ["low", "medium", "high"],

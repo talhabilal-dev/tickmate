@@ -41,16 +41,20 @@ Ticket information:
 - Title: ${ticket.title}
 - Description: ${ticket.description}`);
 
-  const raw = response.output[0].context;
+  const raw = response.output[0].content; // This is the markdown-style AI response
 
   try {
     const match = raw.match(/```json\s*([\s\S]*?)\s*```/i);
     const jsonString = match ? match[1] : raw.trim();
-    return JSON.parse(jsonString);
+
+    const parsed = JSON.parse(jsonString);
+
+    console.log("✅ Parsed JSON:", parsed);
+
+    return parsed;
   } catch (e) {
-    console.log("Failed to parse JSON from AI response" + e.message);
-    return null; // watch out for this
+    console.error("❌ Failed to parse JSON from AI response:", e.message);
+    return null;
   }
 };
-
 export default analyzeTicket;

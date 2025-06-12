@@ -25,6 +25,8 @@ export const onTicketCreated = inngest.createFunction(
 
       const aiResponse = await analyzeTicket(ticket);
 
+      console.log(aiResponse);
+
       const relatedskills = await step.run("ai-processing", async () => {
         let skills = [];
         if (aiResponse) {

@@ -162,7 +162,7 @@ export const updateSkills = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   try {
-    const { fullName, email } = req.body;
+    const { name, email } = req.body;
 
     if (!req.user?.userId) {
       return res.status(401).json({ message: "Unauthorized", success: false });
@@ -182,18 +182,16 @@ export const updateUser = async (req, res) => {
     const updatedUser = await userModel.findByIdAndUpdate(
       req.user.userId,
       {
-        name: fullName ? fullName : existingUser.name,
+        name: name ? name : existingUser.name,
         email: email ? email : existingUser.email,
       },
       { new: true }
     );
-    return res.status(200).json(
-      res.status(200).json({
-        user: updatedUser,
-        success: true,
-        message: "User updated successfully",
-      })
-    );
+    return res.status(200).json({
+      user: updatedUser,
+      success: true,
+      message: "User updated successfully",
+    });
   } catch (error) {
     res.status(500).json({
       error: error.message,
@@ -218,6 +216,57 @@ export const getUser = async (req, res) => {
     return res.status(200).json({ user, success: true });
   } catch (error) {
     console.error("Error in getUser:", error);
+    res.status(500).json({
+      error: error.message,
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    console.log(oldPassword, newPassword);
+
+    if (!req.user?.userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
+    }
+
+    if (req.user.role !== "user") {
+      return res.status(403).json({ message: "Forbidden", success: false });
+    }
+
+    const user = await userModel.findById(req.user.userId).select("+password");
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "Failed to get user", success: false });
+    }
+
+    const passwordMatch = await argon2.verify(user.password, oldPassword);
+
+    console.log(passwordMatch);
+
+    if (!passwordMatch) {
+      return res
+        .status(401)
+        .json({ message: "Invalid old password", success: false });
+    }
+
+    const hashedPassword = await argon2.hash(newPassword);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Password changed successfully",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error in changePassword:", error);
     res.status(500).json({
       error: error.message,
       success: false,

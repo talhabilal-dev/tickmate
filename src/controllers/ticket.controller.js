@@ -78,17 +78,21 @@ export const getTicket = async (req, res) => {
       ]);
     } else {
       ticket = Ticket.findOne({
-        createdBy: user._id,
+        createdBy: user.userId,
         _id: req.params.id,
       }).select("title description status createdAt");
     }
 
     if (!ticket) {
-      return res.status(404).json({ message: "Ticket not found" });
+      return res
+        .status(404)
+        .json({ message: "Ticket not found", success: false });
     }
-    return res.status(404).json({ ticket });
+    return res.status(404).json({ ticket, success: true });
   } catch (error) {
     console.error("Error fetching ticket", error.message);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", success: false });
   }
 };

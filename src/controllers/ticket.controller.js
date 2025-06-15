@@ -48,7 +48,8 @@ export const getTickets = async (req, res) => {
     if (user.role === "admin") {
       // Admin or other privileged roles: get all tickets
       tickets = await Ticket.find({})
-        .populate("assignedTo", "name email _id") // fetch full name + email
+        .populate("assignedTo", "name email _id")
+        .populate("createdBy", "name email _id") // fetch full name + email
         .sort({ createdAt: -1 })
         .lean();
     } else {
@@ -72,8 +73,6 @@ export const getTickets = async (req, res) => {
       .json({ message: "Internal Server Error", success: false });
   }
 };
-
-
 
 export const toggleTicketStatus = async (req, res) => {
   try {
@@ -115,6 +114,63 @@ export const assignedTickets = async (req, res) => {
     console.error("Error fetching assigned tickets:", error.message);
     return res.status(500).json({
       error: error.message,
+      message: "Internal Server Error",
+      success: false,
+    });
+  }
+};
+
+export const ticketReply = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+
+    if (!message) {
+      return res.status(400).json({
+        message: "Message is required",
+        success: false,
+      });
+    }
+
+    if (req.user.role !== "moderator" && req.user.role !== "admin") {
+      return res.status(403).json({
+        message: "Forbidden: Moderators and Admins only",
+        success: false,
+      });
+    }
+
+    const ticket = await Ticket.findById(id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        message: "Ticket not found",
+        success: false,
+      });
+    }
+
+    if (ticket.status === "closed") {
+      return res.status(400).json({
+        message: "Ticket is already closed",
+        success: false,
+      });
+    }
+
+    if (ticket.assignedTo.toString() !== req.user.userId) {
+      return res.status(403).json({
+        message: "You are not allowed to reply to this ticket",
+        success: false,
+      });
+    }
+    ticket.reply = message;
+    await ticket.save();
+    return res.status(200).json({
+      message: "Ticket reply updated",
+      success: true,
+      ticket,
+    });
+  } catch (error) {
+    console.error("Error replying to ticket:", error.message);
+    return res.status(500).json({
       message: "Internal Server Error",
       success: false,
     });

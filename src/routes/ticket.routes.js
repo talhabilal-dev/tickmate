@@ -1,15 +1,17 @@
 import express from "express";
 import { verifyAuthToken } from "../middlewares/auth.middleware.js";
 import {
+  assignedTickets,
   createTicket,
-  getTicket,
   getTickets,
+  toggleTicketStatus,
 } from "../controllers/ticket.controller.js";
 
 const router = express.Router();
 
 router.get("/", verifyAuthToken, getTickets);
-router.get("/:id", verifyAuthToken, getTicket);
 router.post("/", verifyAuthToken, createTicket);
+router.put("/status/:id", verifyAuthToken, toggleTicketStatus);
+router.get("/get-assigned", verifyAuthToken, assignedTickets);
 
 export default router;

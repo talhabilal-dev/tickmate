@@ -18,12 +18,13 @@ const TicketSchema = new Schema(
       required: true,
     },
     deadline: Date,
-    helpfulNote: String,
+    helpfulNotes: String,
     relatedSkills: [String],
+    reply: String,
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Ticket", TicketSchema);
+export default mongoose.models.Ticket || mongoose.model("Ticket", TicketSchema);

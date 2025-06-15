@@ -228,8 +228,6 @@ export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 
-    console.log(oldPassword, newPassword);
-
     if (!req.user?.userId) {
       return res.status(401).json({ message: "Unauthorized", success: false });
     }
@@ -247,8 +245,6 @@ export const changePassword = async (req, res) => {
     }
 
     const passwordMatch = await argon2.verify(user.password, oldPassword);
-
-    console.log(passwordMatch);
 
     if (!passwordMatch) {
       return res

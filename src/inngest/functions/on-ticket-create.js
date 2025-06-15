@@ -30,6 +30,7 @@ export const onTicketCreated = inngest.createFunction(
       const relatedskills = await step.run("ai-processing", async () => {
         let skills = [];
         if (aiResponse) {
+          console.log("aiResponse", aiResponse);
           await Ticket.findByIdAndUpdate(ticket._id, {
             priority: !["low", "medium", "high"].includes(aiResponse.priority)
               ? "medium"

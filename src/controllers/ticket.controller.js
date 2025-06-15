@@ -44,15 +44,22 @@ export const getTickets = async (req, res) => {
   try {
     const user = req.user;
     let tickets = [];
-    if (user.role !== "user") {
-      tickets = Ticket.find({})
-        .populate("assignedTo", ["email", "_id"])
-        .sort({ createdAt: -1 });
+
+    if (user.role === "admin") {
+      // Admin or other privileged roles: get all tickets
+      tickets = await Ticket.find({})
+        .populate("assignedTo", "name email _id") // fetch full name + email
+        .sort({ createdAt: -1 })
+        .lean();
     } else {
+      // Regular user: get only their created tickets
       tickets = await Ticket.find({ createdBy: user.userId })
-        .select("title description status createdAt")
-        .sort({ createdAt: -1 });
+        .select("title description status createdAt assignedTo helpfulNotes")
+        .populate("assignedTo", "name")
+        .sort({ createdAt: -1 })
+        .lean();
     }
+
     return res.status(200).json({
       message: "Tickets fetched successfully",
       success: true,
@@ -66,33 +73,50 @@ export const getTickets = async (req, res) => {
   }
 };
 
-export const getTicket = async (req, res) => {
+
+
+export const toggleTicketStatus = async (req, res) => {
   try {
-    const user = req.user;
-    let ticket;
-
-    if (user.role !== "user") {
-      ticket = Ticket.findById(req.params.id).populate("assignedTo", [
-        "email",
-        "_id",
-      ]);
-    } else {
-      ticket = Ticket.findOne({
-        createdBy: user.userId,
-        _id: req.params.id,
-      }).select("title description status createdAt");
-    }
-
-    if (!ticket) {
-      return res
-        .status(404)
-        .json({ message: "Ticket not found", success: false });
-    }
-    return res.status(404).json({ ticket, success: true });
+    const { id } = req.params;
+    const updatedTicket = await Ticket.findByIdAndUpdate(
+      id,
+      { status: "closed" },
+      { new: true }
+    );
+    return res.status(200).json({
+      message: "Ticket status updated",
+      success: true,
+      ticket: updatedTicket,
+    });
   } catch (error) {
-    console.error("Error fetching ticket", error.message);
+    console.error("Error updating ticket status", error.message);
     return res
       .status(500)
       .json({ message: "Internal Server Error", success: false });
+  }
+};
+
+export const assignedTickets = async (req, res) => {
+  const user = req.user;
+
+  try {
+    const tickets = await Ticket.find({ assignedTo: user.userId })
+      .select("title description status createdAt assignedTo helpfulNotes")
+      .populate("assignedTo", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      message: "Tickets fetched successfully",
+      success: true,
+      tickets,
+    });
+  } catch (error) {
+    console.error("Error fetching assigned tickets:", error.message);
+    return res.status(500).json({
+      error: error.message,
+      message: "Internal Server Error",
+      success: false,
+    });
   }
 };

@@ -3,7 +3,6 @@ import ENV from "../config/env.config.js";
 
 export const verifyAuthToken = (req, res, next) => {
   try {
-   
     let token = req.cookies?.token;
     // Check for Bearer token in Authorization header if not in cookies
     if (

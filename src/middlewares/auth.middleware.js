@@ -21,6 +21,19 @@ export const verifyAuthToken = (req, res, next) => {
 
     const decoded = jwt.verify(token, ENV.JWT_SECRET);
     req.user = decoded;
+
+    if (!req.user) {
+      return res
+        .status(401)
+        .json({ message: "Invalid or expired token", success: false });
+    }
+
+    // if (req.user.status !== "active") {
+    //   return res
+    //     .status(401)
+    //     .json({ message: "User is not active", success: false });
+    // }
+
     next();
   } catch (err) {
     console.error("JWT verification failed:", err);

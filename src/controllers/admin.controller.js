@@ -1,5 +1,5 @@
-import User from "../models/user.model";
-import Ticket from "../models/ticket.model";
+import User from "../models/user.model.js";
+import Ticket from "../models/ticket.model.js";
 export const getAllUsers = async (req, res) => {
   try {
     if (req.user.role !== "admin") {

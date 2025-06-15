@@ -4,6 +4,8 @@ import connectDB from "./config/db.config.js";
 import cors from "cors";
 import userRoutes from "./routes/user.routes.js";
 import ticketRoutes from "./routes/ticket.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+
 import { inngest } from "./inngest/client.js";
 import { onUserSignup } from "./inngest/functions/on-signup.js";
 import { onTicketCreated } from "./inngest/functions/on-ticket-create.js";
@@ -26,6 +28,8 @@ app.use(express.json());
 
 app.use("/api/auth", userRoutes);
 app.use("/api/tickets", ticketRoutes);
+
+app.use("/api/admin", adminRoutes);
 
 app.use(
   "/api/inngest",

@@ -43,23 +43,15 @@ export const createTicket = async (req, res) => {
 export const getTickets = async (req, res) => {
   try {
     const user = req.user;
-    let tickets = [];
 
-    if (user.role === "admin") {
-      // Admin or other privileged roles: get all tickets
-      tickets = await Ticket.find({})
-        .populate("assignedTo", "name email _id")
-        .populate("createdBy", "name email _id") // fetch full name + email
-        .sort({ createdAt: -1 })
-        .lean();
-    } else {
-      // Regular user: get only their created tickets
-      tickets = await Ticket.find({ createdBy: user.userId })
-        .select("title description status createdAt assignedTo helpfulNotes")
-        .populate("assignedTo", "name")
-        .sort({ createdAt: -1 })
-        .lean();
-    }
+    // Regular user: get only their created tickets
+    const tickets = await Ticket.find({ createdBy: user.userId })
+      .select(
+        "title description status createdAt assignedTo helpfulNotes relatedSkills"
+      )
+      .populate("assignedTo", "name")
+      .sort({ createdAt: -1 })
+      .lean();
 
     return res.status(200).json({
       message: "Tickets fetched successfully",
@@ -173,6 +165,73 @@ export const ticketReply = async (req, res) => {
     return res.status(500).json({
       message: "Internal Server Error",
       success: false,
+    });
+  }
+};
+
+export const getUserTicketSummary = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    // 🔹 Fetch all user's tickets for display
+    const tickets = await Ticket.find({ createdBy: userId })
+      .select("title assignedTo priority createdAt status relatedSkills")
+      .populate("assignedTo", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // 🔹 Compute current summary
+    const totalTickets = tickets.length;
+    const inProgress = tickets.filter((t) => t.status === "in_progress").length;
+    const completed = tickets.filter((t) => t.status === "closed").length;
+
+    // 🔹 Define time windows (last 7 days vs previous 7 days)
+    const now = new Date();
+    const startOfCurrent = new Date();
+    startOfCurrent.setDate(now.getDate() - 7);
+
+    const startOfPrevious = new Date();
+    startOfPrevious.setDate(now.getDate() - 14);
+    const endOfPrevious = new Date();
+    endOfPrevious.setDate(now.getDate() - 7);
+
+    // 🔹 Fetch previous period tickets for comparison
+    const previousTickets = await Ticket.find({
+      createdBy: userId,
+      createdAt: { $gte: startOfPrevious, $lt: endOfPrevious },
+    })
+      .select("status")
+      .lean();
+
+    const previousSummary = {
+      totalTickets: previousTickets.length,
+      inProgress: previousTickets.filter((t) => t.status === "in_progress")
+        .length,
+      completed: previousTickets.filter((t) => t.status === "closed").length,
+    };
+    return res.status(200).json({
+      success: true,
+      message: "User ticket summary fetched successfully",
+      summary: {
+        totalTickets,
+        inProgress,
+        completed,
+      },
+      previousSummary,
+      tickets,
+    });
+  } catch (error) {
+    console.error("Error fetching user ticket summary:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
     });
   }
 };

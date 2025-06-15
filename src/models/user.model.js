@@ -13,6 +13,7 @@ const UserSchema = new Schema({
   role: { type: String, default: "user", enum: ["user", "moderator", "admin"] },
   skills: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
+  status: { type: String, default: "active", enum: ["active", "inactive"] },
 });
 
 export default mongoose.model("User", UserSchema);

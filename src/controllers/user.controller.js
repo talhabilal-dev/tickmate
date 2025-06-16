@@ -54,29 +54,56 @@ export const login = async (req, res) => {
 
   try {
     const user = await userModel.findOne({ email }).select("+password");
+
     if (!user) {
-      return res
-        .status(401)
-        .json({ message: "Invalid email or password", success: false });
+      return res.status(401).json({
+        message: "Invalid email or password",
+        success: false,
+      });
     }
 
     const isPasswordValid = await argon2.verify(user.password, password);
 
     if (!isPasswordValid) {
-      return res
-        .status(401)
-        .json({ message: "Invalid email or password", success: false });
+      return res.status(401).json({
+        message: "Invalid email or password",
+        success: false,
+      });
     }
 
+    if (user.status !== "active") {
+      return res.status(401).json({
+        message: "User is not active",
+        success: false,
+      });
+    }
+
+    // Standard user token
     const token = jwt.sign(
-      { userId: user._id, role: user.role, status: user.status },
-      ENV.JWT_SECRET,
       {
-        expiresIn: "1d",
-      }
+        userId: user._id,
+        role: user.role,
+        status: user.status,
+      },
+      ENV.JWT_SECRET,
+      { expiresIn: "1d" }
     );
 
+    let adminToken = null;
+    if (user.role === "admin") {
+      adminToken = jwt.sign(
+        {
+          adminId: user._id,
+          role: "admin",
+          scope: "full-access",
+        },
+        ENV.JWT_SECRET,
+        { expiresIn: "12h" }
+      );
+    }
+
     user.password = undefined;
+    user.loginTime = Date.now();
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -85,9 +112,21 @@ export const login = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    return res
-      .status(200)
-      .json({ user, success: true, message: "User logged in successfully" });
+    if (adminToken) {
+      res.cookie("adminToken", adminToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        maxAge: 12 * 60 * 60 * 1000,
+      });
+    }
+
+    return res.status(200).json({
+      user,
+      success: true,
+      message: "User logged in successfully",
+      ...(adminToken && { adminToken }),
+    });
   } catch (error) {
     console.error("Error in login:", error);
 
@@ -101,10 +140,26 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    res.clearCookie("token");
-    return res
-      .status(200)
-      .json({ message: "User logged out successfully", success: true });
+    if (!req.user?.userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
+    }
+
+    // Clear both tokens
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+    res.clearCookie("adminToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+
+    return res.status(200).json({
+      message: "User logged out successfully",
+      success: true,
+    });
   } catch (error) {
     console.error("Error in logout:", error);
     res.status(500).json({

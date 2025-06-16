@@ -9,6 +9,7 @@ const UserSchema = new Schema({
     lowercase: true,
     trim: true,
   },
+  loginTime: { type: Date, default: Date.now },
   password: { type: String, required: true, select: false },
   role: { type: String, default: "user", enum: ["user", "moderator", "admin"] },
   skills: { type: [String], default: [] },

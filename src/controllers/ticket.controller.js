@@ -3,7 +3,18 @@ import Ticket from "../models/ticket.model.js";
 
 export const createTicket = async (req, res) => {
   try {
-    const { title, description, category } = req.body;
+    if (!req.user.userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User not found", success: false });
+    }
+
+    const { title, description, category, deadline } = req.body;
 
     if (!title || !description || !category) {
       return res.status(400).json({
@@ -16,6 +27,7 @@ export const createTicket = async (req, res) => {
       description,
       category,
       createdBy: req.user.userId,
+      deadline,
     });
 
     await inngest.send({
@@ -172,6 +184,8 @@ export const ticketReply = async (req, res) => {
 export const getUserTicketSummary = async (req, res) => {
   try {
     const userId = req.user?.userId;
+
+    console.log(userId);
 
     if (!userId) {
       return res.status(401).json({

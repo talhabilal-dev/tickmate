@@ -93,7 +93,20 @@ export const getAdminDashboard = async (req, res) => {
     if (!admin || admin.role !== "admin") {
       return res.status(403).json({ message: "Access denied", success: false });
     }
-    console.log(admin);
+
+    const adminProfile = await User.findById(admin.userId);
+
+    if (!adminProfile) {
+      return res
+        .status(404)
+        .json({ message: "Admin profile not found", success: false });
+    }
+
+    if (!adminProfile.isActive) {
+      return res
+        .status(403)
+        .json({ message: "Admin is not active", success: false });
+    }
 
     const [users, tickets, inProgressCount, completedCount, activeUsersCount] =
       await Promise.all([
@@ -108,13 +121,7 @@ export const getAdminDashboard = async (req, res) => {
 
     res.json({
       success: true,
-      adminProfile: {
-        name: admin.name,
-        email: admin.email,
-        role: admin.role,
-        skills: admin.skills,
-        status: admin.status,
-      },
+      adminProfile: adminProfile,
       users,
       tickets,
       stats: {
@@ -130,5 +137,45 @@ export const getAdminDashboard = async (req, res) => {
     res
       .status(500)
       .json({ message: "Server error loading dashboard", success: false });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  const { _id, name, email, skills, role, isActive } = req.body;
+
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "Forbidden: Admins only",
+      success: false,
+    });
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      _id.toString(),
+      { name, email, skills, role, isActive },
+      { new: true }
+    );
+
+    console.log(user);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "User updated successfully",
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error("Error updating user:", error.message);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      success: false,
+    });
   }
 };

@@ -28,11 +28,11 @@ export const verifyAuthToken = (req, res, next) => {
         .json({ message: "Invalid or expired token", success: false });
     }
 
-    // if (req.user.status !== "active") {
-    //   return res
-    //     .status(401)
-    //     .json({ message: "User is not active", success: false });
-    // }
+    if (!req.user.isActive) {
+      return res
+        .status(401)
+        .json({ message: "User is not active", success: false });
+    }
 
     next();
   } catch (err) {

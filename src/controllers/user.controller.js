@@ -38,7 +38,7 @@ export const signup = async (req, res) => {
 
     return res
       .status(201)
-      .json({ user, success: true, message: "User created successfully" });
+      .json({ success: true, message: "User created successfully" });
   } catch (error) {
     console.log(error);
     return res.status(500).json({
@@ -71,7 +71,7 @@ export const login = async (req, res) => {
       });
     }
 
-    if (user.status !== "active") {
+    if (!user.isActive) {
       return res.status(401).json({
         message: "User is not active",
         success: false,
@@ -81,9 +81,9 @@ export const login = async (req, res) => {
     // Standard user token
     const token = jwt.sign(
       {
-        userId: user._id,
+        userId: user._id.toString(),
         role: user.role,
-        status: user.status,
+        isActive: user.isActive,
       },
       ENV.JWT_SECRET,
       { expiresIn: "1d" }
@@ -93,7 +93,7 @@ export const login = async (req, res) => {
     if (user.role === "admin") {
       adminToken = jwt.sign(
         {
-          adminId: user._id,
+          adminId: user._id.toString(),
           role: "admin",
           scope: "full-access",
         },

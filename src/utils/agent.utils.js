@@ -49,8 +49,6 @@ Ticket information:
 
     const parsed = JSON.parse(jsonString);
 
-    console.log("✅ Parsed JSON:", parsed);
-
     return parsed;
   } catch (e) {
     console.error("❌ Failed to parse JSON from AI response:", e.message);

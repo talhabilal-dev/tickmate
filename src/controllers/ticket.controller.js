@@ -1,5 +1,6 @@
 import { inngest } from "../inngest/client.js";
 import Ticket from "../models/ticket.model.js";
+import User from "../models/user.model.js";
 
 export const createTicket = async (req, res) => {
   try {
@@ -59,9 +60,10 @@ export const getTickets = async (req, res) => {
     // Regular user: get only their created tickets
     const tickets = await Ticket.find({ createdBy: user.userId })
       .select(
-        "title description status createdAt assignedTo helpfulNotes relatedSkills"
+        "title description status createdAt assignedTo helpfulNotes relatedSkills updatedAt priority deadline category createdBy updatedAt"
       )
       .populate("assignedTo", "name")
+      .populate("createdBy", "name")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -104,7 +106,9 @@ export const assignedTickets = async (req, res) => {
 
   try {
     const tickets = await Ticket.find({ assignedTo: user.userId })
-      .select("title description status createdAt assignedTo helpfulNotes")
+      .select(
+        "title description status createdAt assignedTo helpfulNotes updatedAt relatedSkills priority deadline category createdBy updatedAt"
+      )
       .populate("assignedTo", "name")
       .sort({ createdAt: -1 })
       .lean();
@@ -126,8 +130,7 @@ export const assignedTickets = async (req, res) => {
 
 export const ticketReply = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { message } = req.body;
+    const { message, ticketId } = req.body;
 
     if (!message) {
       return res.status(400).json({
@@ -143,7 +146,7 @@ export const ticketReply = async (req, res) => {
       });
     }
 
-    const ticket = await Ticket.findById(id);
+    const ticket = await Ticket.findById(ticketId);
 
     if (!ticket) {
       return res.status(404).json({
@@ -165,7 +168,11 @@ export const ticketReply = async (req, res) => {
         success: false,
       });
     }
-    ticket.reply = message;
+    ticket.replies.push({
+      message,
+      createdAt: new Date(),
+      createdBy: req.user.userId,
+    });
     await ticket.save();
     return res.status(200).json({
       message: "Ticket reply updated",
@@ -184,8 +191,6 @@ export const ticketReply = async (req, res) => {
 export const getUserTicketSummary = async (req, res) => {
   try {
     const userId = req.user?.userId;
-
-    console.log(userId);
 
     if (!userId) {
       return res.status(401).json({
@@ -247,5 +252,50 @@ export const getUserTicketSummary = async (req, res) => {
       success: false,
       message: "Internal Server Error",
     });
+  }
+};
+
+export const deleteTicket = async (req, res) => {
+  try {
+    const { ticketId } = req.body;
+
+    if (!ticketId) {
+      return res.status(400).json({
+        message: "Ticket ID is required",
+        success: false,
+      });
+    }
+
+    const ticket = await Ticket.findById(ticketId);
+
+    if (!ticket) {
+      return res.status(404).json({
+        message: "Ticket not found",
+        success: false,
+      });
+    }
+
+    if (
+      ticket.createdBy.toString() !== req.user.userId &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        message: "You are not allowed to delete this ticket",
+        success: false,
+      });
+    }
+
+    const deletedTicket = await Ticket.findByIdAndDelete(ticketId);
+
+    return res.status(200).json({
+      message: "Ticket deleted successfully",
+      success: true,
+      ticket: deletedTicket,
+    });
+  } catch (error) {
+    console.error("Error deleting ticket", error.message);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", success: false });
   }
 };

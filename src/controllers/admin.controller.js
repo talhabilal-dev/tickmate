@@ -63,9 +63,9 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    const { id } = req.params;
+    const { userId } = req.body;
 
-    const deletedUser = await User.findByIdAndDelete(id);
+    const deletedUser = await User.findByIdAndDelete(userId);
 
     if (!deletedUser) {
       return res.status(404).json({
@@ -111,12 +111,14 @@ export const getAdminDashboard = async (req, res) => {
     const [users, tickets, inProgressCount, completedCount, activeUsersCount] =
       await Promise.all([
         User.find().sort({ createdAt: -1 }),
-        Ticket.find().populate("createdBy assignedTo", "name email").sort({
-          createdAt: -1,
-        }),
+        Ticket.find()
+          .populate("createdBy", "name email")
+          .populate("assignedTo", "name email")
+          .populate("replies.createdBy", "name email") // ✅ populating reply authors
+          .sort({ createdAt: -1 }),
         Ticket.countDocuments({ status: "in_progress" }),
-        Ticket.countDocuments({ status: "closed" }),
-        User.countDocuments({ status: "active" }),
+        Ticket.countDocuments({ status: "completed" }),
+        User.countDocuments({ isActive: true }),
       ]);
 
     res.json({
@@ -156,8 +158,6 @@ export const updateUser = async (req, res) => {
       { name, email, skills, role, isActive },
       { new: true }
     );
-
-    console.log(user);
 
     if (!user) {
       return res.status(404).json({

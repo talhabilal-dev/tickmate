@@ -20,7 +20,16 @@ const TicketSchema = new Schema(
     deadline: Date,
     helpfulNotes: String,
     relatedSkills: [String],
-    reply: String,
+    replies: {
+      type: [
+        {
+          message: String,
+          createdAt: Date,
+          createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        },
+      ],
+      default: [],
+    },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },

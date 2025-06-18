@@ -40,7 +40,7 @@ export const signup = async (req, res) => {
       .status(201)
       .json({ success: true, message: "User created successfully" });
   } catch (error) {
-    console.log(error);
+    console.error("Error creating user:", error.message);
     return res.status(500).json({
       error: error.message,
       success: false,
@@ -173,7 +173,6 @@ export const logout = async (req, res) => {
 export const updateSkills = async (req, res) => {
   const { skills, role } = req.body;
 
-  console.log(skills);
   try {
     if (!req.user?.userId) {
       return res.status(401).json({ message: "Unauthorized", success: false });

@@ -36,6 +36,7 @@ app.use(
   serve({
     client: inngest,
     functions: [onUserSignup, onTicketCreated],
+    baseUrl: "/api/inngest",
   })
 );
 

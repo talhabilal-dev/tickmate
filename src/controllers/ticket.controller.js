@@ -110,6 +110,7 @@ export const assignedTickets = async (req, res) => {
         "title description status createdAt assignedTo helpfulNotes updatedAt relatedSkills priority deadline category createdBy updatedAt"
       )
       .populate("assignedTo", "name")
+      .populate("createdBy", "name")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -294,6 +295,111 @@ export const deleteTicket = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting ticket", error.message);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", success: false });
+  }
+};
+
+export const editTicket = async (req, res) => {
+  try {
+    const {
+      _id,
+      title,
+      description,
+      category,
+      deadline,
+      status,
+      priority,
+      assignedTo,
+      helpfulNotes,
+      relatedSkills,
+    } = req.body;
+
+    console.log(req.body);
+
+    const ticketId = await _id.toString();
+
+    if (!req.user.userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
+    }
+
+    if (!ticketId) {
+      return res.status(400).json({
+        message: "Ticket ID is required",
+        success: false,
+      });
+    }
+
+    const ticket = await Ticket.findById(ticketId);
+
+    if (!ticket) {
+      return res.status(404).json({
+        message: "Ticket not found",
+        success: false,
+      });
+    }
+
+    if (
+      ticket.createdBy.toString() !== req.user.userId &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        message: "You are not allowed to edit this ticket",
+        success: false,
+      });
+    }
+
+    if (title) ticket.title = title;
+    if (description) ticket.description = description;
+    if (category) ticket.category = category;
+    if (deadline) ticket.deadline = deadline;
+    if (status) ticket.status = status;
+    if (priority) ticket.priority = priority;
+    if (helpfulNotes) ticket.helpfulNotes = helpfulNotes;
+
+    ticket.updatedAt = new Date();
+
+    if (assignedTo && assignedTo !== ticket.assignedTo?.toString()) {
+      const user = await User.findById(assignedTo);
+      if (!user) {
+        return res.status(404).json({
+          message: "Assigned user not found",
+          success: false,
+        });
+      }
+      ticket.assignedTo = user._id;
+    }
+
+    if (relatedSkills) {
+      if (Array.isArray(relatedSkills)) {
+        ticket.relatedSkills = relatedSkills.map((skill) => skill.trim());
+      } else if (typeof relatedSkills === "string") {
+        ticket.relatedSkills = relatedSkills.split(",").map((s) => s.trim());
+      } else {
+        return res.status(400).json({
+          message: "Related skills must be an array or comma-separated string",
+          success: false,
+        });
+      }
+    }
+
+    await ticket.save();
+    const updatedTicket = await Ticket.findById(ticketId)
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "name email")
+      .select(
+        "title description status createdAt assignedTo helpfulNotes relatedSkills updatedAt priority deadline category createdBy updatedAt"
+      )
+      .lean();
+
+    return res.status(200).json({
+      message: "Ticket updated successfully",
+      success: true,
+      ticket: updatedTicket,
+    });
+  } catch (error) {
+    console.error("Error editing ticket", error.message);
     return res
       .status(500)
       .json({ message: "Internal Server Error", success: false });

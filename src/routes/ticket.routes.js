@@ -4,6 +4,7 @@ import {
   assignedTickets,
   createTicket,
   deleteTicket,
+  editTicket,
   getTickets,
   getUserTicketSummary,
   ticketReply,
@@ -19,5 +20,6 @@ router.get("/get-assigned", verifyAuthToken, assignedTickets);
 router.put("/ticket-reply", verifyAuthToken, ticketReply);
 router.get("/tickets-summary", verifyAuthToken, getUserTicketSummary);
 router.delete("/delete-ticket", verifyAuthToken, deleteTicket);
+router.put("/edit-ticket", verifyAuthToken, editTicket);
 
 export default router;

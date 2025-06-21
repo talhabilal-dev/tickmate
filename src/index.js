@@ -19,11 +19,11 @@ const corsOptions = {
   origin: ENV.APP_URL,
   credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  preflightContinue: false,
   optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 app.use("/api/auth", userRoutes);

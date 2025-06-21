@@ -21,7 +21,9 @@ const corsOptions = {
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   optionsSuccessStatus: 204,
 };
-console.log("Using CORS options:", corsOptions);
+
+app.set("trust proxy", 1);
+
 app.use(cors(corsOptions));
 app.use(express.json());
 

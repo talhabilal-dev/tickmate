@@ -21,9 +21,8 @@ const corsOptions = {
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   optionsSuccessStatus: 204,
 };
-
+console.log("Using CORS options:", corsOptions);
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 app.use(express.json());
 
 app.use("/api/auth", userRoutes);

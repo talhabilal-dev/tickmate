@@ -57,8 +57,8 @@
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd helpdesk-system
+git clone https://github.com/talhabilal-dev/tickmate.git
+cd tickmate
 
 # Install dependencies
 npm install
@@ -71,7 +71,7 @@ cp .env.example .env
 
 ```env
 # Database
-MONGO_URI=mongodb://localhost:27017/helpdesk
+MONGO_URI=mongodb+srv://<username>::<password>@cluster0.m8oca.mongodb.net/<database_name>?retryWrites=true&w=majority&appName=Cluster0
 
 # JWT
 JWT_SECRET=your-super-secret-jwt-key

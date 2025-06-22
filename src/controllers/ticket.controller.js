@@ -316,8 +316,6 @@ export const editTicket = async (req, res) => {
       relatedSkills,
     } = req.body;
 
-    console.log(req.body);
-
     const ticketId = await _id.toString();
 
     if (!req.user.userId) {

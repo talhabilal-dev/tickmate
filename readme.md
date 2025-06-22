@@ -1,156 +1,238 @@
-# 🎫 TICMaTe – AI-Powered Ticketing System Backend
+# 🎫 TickMate (AI Powered Ticketing System)
 
-TICMaTe is a full-stack, role-based ticketing platform where users can create, assign, and resolve tech-related tickets. This backend powers the core logic using **Node.js**, **Express**, **MongoDB**, and **Inngest + Gemini** for AI-enhanced support suggestions.
+> An intelligent ticket management system that leverages AI to automatically analyze tickets, extract helpful notes, and assign them to the most qualified moderators based on skill matching.
 
----
+## 🌟 Features
 
-## 🚀 Features
+- **🔐 Secure Authentication**: JWT-based authentication with Argon2 password hashing
+- **🎯 AI-Powered Ticket Analysis**: Gemini AI analyzes tickets and extracts relevant skills
+- **👥 Smart Assignment**: Automatic ticket assignment to moderators with matching skills
+- **📧 Email Notifications**: Resend integration for email communications
+- **⚡ Background Processing**: Inngest for reliable background task execution
+- **📊 Admin Dashboard**: Comprehensive admin panel for user and ticket management
 
-- 🔐 **Authentication**
-  - Sign up, sign in, sign out
-  - Forgot password, reset password
-  - Email verification
-- 👥 **Role-Based Access Control**
-  - `User`, `Moderator`, and `Admin` roles
-  - Protected routes & middleware guards
-- 📝 **Ticket System**
-  - Create, update, delete, view tickets
-  - Assign tickets to users based on skill match
-  - Reply to tickets (comment threads)
-- 🧠 **AI Agent Integration**
-  - Uses Inngest workers + Gemini API
-  - AI-generated helper notes based on ticket content
-- ⚙️ **User Management (Admin only)**
-  - View all users, activate/deactivate accounts
-  - Edit user skills and details
-- 📊 **Dashboard Analytics (Admin)**
-  - User stats, ticket stats, status breakdowns
+## 🏗️ Architecture
 
----
+### Tech Stack
 
-## 🛠️ Tech Stack
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Backend** | Node.js | Server runtime |
+| **Database** | MongoDB + Mongoose | Data storage and ODM |
+| **Authentication** | JWT + Argon2 | Secure user authentication |
+| **AI Processing** | Gemini AI | Ticket analysis and skill extraction |
+| **Background Jobs** | Inngest | Asynchronous task processing |
+| **Email Service** | Resend | Email notifications |
+| **Agent Framework** | Inngest AI Agent Kit | AI workflow orchestration |
 
-| Tech           | Purpose                      |
-| -------------- | ---------------------------- |
-| **Node.js**    | Core backend runtime         |
-| **Express.js** | RESTful API server           |
-| **MongoDB**    | Database                     |
-| **Mongoose**   | ODM for MongoDB              |
-| **JWT**        | Auth token management        |
-| **Argon2**     | Password hashing             |
-| **Inngest**    | Background jobs (AI trigger) |
-| **Gemini API** | AI suggestions per ticket    |
-| **Dotenv**     | Environment configs          |
-| **CORS**       | Cross-origin middleware      |
-| **Nodemon**    | Dev server                   |
-| **NPM**        | Package manager              |
-| **Postman**    | API testing                  |
-| **Resend**     | Email service                |
+### 🔄 System Flow
 
----
-
-## 📁 Folder Structure
-
-```bash
-
-/controllers → Route logic
-/models → Mongoose schemas (User, Ticket)
-/routes → API endpoints
-/middleware → Auth guards, error handlers
-/utils → Token gen, email helpers, skill match
-/services → Gemini AI integration, Inngest triggers
-/config → DB connection, global config
+```
+1. 👤 User Registration/Login
+   ↓
+2. 🎫 Ticket Creation
+   ↓
+3. 🤖 AI Agent Analysis (Gemini)
+   ├── Extract helpful notes
+   └── Identify required skills
+   ↓
+4. 🎯 Smart Assignment
+   └── Match with moderator skills
+   ↓
+5. 📧 Notification System
+   └── Email alerts via Resend
 ```
 
----
+## 🚀 Quick Start
 
-## 🧪 Setup & Run Locally
+### Prerequisites
+
+- Node.js (v16 or higher)
+- MongoDB
+- Resend API key
+- Google Gemini API key
+- Inngest account
+
+### Installation
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/talhabilal-dev/tickmate.git
-cd ticmate
+# Clone the repository
+git clone <repository-url>
+cd helpdesk-system
 
-# 2. Install dependencies
+# Install dependencies
 npm install
 
-# 3. Configure environment variables
+# Set up environment variables
 cp .env.example .env
-# Edit your Mongo URI, JWT secret, Gemini key, etc.
+```
 
-# 4. Start the server
+### Environment Variables
+
+```env
+# Database
+MONGO_URI=mongodb://localhost:27017/helpdesk
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key
+
+# Gemini AI
+GEMINI_API_KEY=your-gemini-api-key
+
+# Resend Email
+RESEND_API_KEY=your-resend-api-key
+
+# Email
+EMAIL_FROM=your-email
+
+# Inngest
+INNGEST_EVENT_KEY=your-inngest-event-key
+INNGEST_SIGNING_KEY=your-inngest-signing-key
+
+# Server
+PORT=5000
+NODE_ENV=development
+
+# Client
+APP_URL=http://localhost:5000
+```
+
+### Running the Application
+
+```bash
+# Start development server
 npm run dev
 
+# Start production server
+npm start
 ```
 
-## 📡 API Routes
+## 📡 API Endpoints
 
-The backend exposes RESTful APIs for authentication, user management, ticket operations, and admin functionality.
+### 🔐 Authentication Routes (`/api/auth`)
 
-### Auth Routes (/api/auth)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `POST` | `/register` | User registration | ❌ |
+| `POST` | `/login` | User login | ❌ |
+| `POST` | `/logout` | User logout | ✅ |
+| `PUT` | `/update-skills` | Update user skills | ✅ |
+| `PUT` | `/update` | Update user profile | ✅ |
+| `PUT` | `/update-password` | Change password | ✅ |
+| `GET` | `/user` | Get user profile | ✅ |
 
-| Method | Endpoint         | Description                      |
-| ------ | ---------------- | -------------------------------- |
-| POST   | /register        | Register a new user              |
-| POST   | /login           | Log in an existing user          |
-| POST   | /logout          | Log out the current user         |
-| PUT    | /update          | Update own user profile          |
-| PUT    | /update-skills   | Update user's listed skills      |
-| PUT    | /update-password | Change account password          |
-| GET    | /user            | Fetch current authenticated user |
+### 🎫 Ticket Routes (`/api/tickets`)
 
-### Ticket Routes (/api/tickets)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/` | Get all tickets | ✅ |
+| `POST` | `/` | Create new ticket | ✅ |
+| `PUT` | `/status/:id` | Toggle ticket status | ✅ |
+| `GET` | `/get-assigned` | Get assigned tickets | ✅ |
+| `PUT` | `/ticket-reply` | Reply to ticket | ✅ |
+| `GET` | `/tickets-summary` | Get user ticket summary | ✅ |
+| `DELETE` | `/delete-ticket` | Delete ticket | ✅ |
+| `PUT` | `/edit-ticket` | Edit ticket | ✅ |
 
-| Method | Endpoint         | Description                          |
-| ------ | ---------------- | ------------------------------------ |
-| GET    | /                | Fetch all tickets for the user       |
-| POST   | /                | Create a new ticket                  |
-| PUT    | /edit-ticket     | Edit a ticket's content              |
-| PUT    | /status/:id      | Toggle ticket status                 |
-| DELETE | /delete-ticket   | Delete a ticket                      |
-| PUT    | /ticket-reply    | Add a reply to a ticket              |
-| GET    | /get-assigned    | Get tickets assigned to current user |
-| GET    | /tickets-summary | Get user's ticket stats summary      |
+### 👑 Admin Routes (`/api/admin`)
 
-### Admin Routes (/api/admin)
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/users` | Get all users | ✅ |
+| `GET` | `/tickets` | Get all tickets | ✅ |
+| `GET` | `/dashboard` | Get admin dashboard | ✅ |
+| `PUT` | `/update-user` | Update user | ✅ |
+| `DELETE` | `/delete-user` | Delete user | ✅ |
 
-### Requires admin role
+## 🤖 AI Agent Workflow
 
-| Method | Endpoint     | Description                         |
-| ------ | ------------ | ----------------------------------- |
-| GET    | /users       | Fetch all registered users          |
-| GET    | /tickets     | Fetch all tickets system-wide       |
-| GET    | /dashboard   | Fetch system-wide stats & summaries |
-| PUT    | /update-user | Update any user (by admin)          |
-| DELETE | /delete-user | Delete any user (by admin)          |
+### Ticket Processing Pipeline
 
-### AI Agent
+```mermaid
+graph TD
+    A[📥 Ticket Created] --> B[🤖 AI Agent Triggered]
+    B --> C[🧠 Gemini Analysis]
+    C --> D[📝 Extract Notes]
+    C --> E[🎯 Identify Skills]
+    D --> F[💾 Update Ticket]
+    E --> F
+    F --> G[👥 Find Matching Moderator]
+    G --> H[✅ Assign Ticket]
+    H --> I[📧 Send Notification]
+```
 
-- Triggered via Inngest worker when a ticket is created/updated
+### AI Analysis Features
+
+- **📊 Content Analysis**: Extracts key information from ticket descriptions
+- **🏷️ Skill Tagging**: Identifies required technical skills
+- **📈 Priority Assessment**: Evaluates ticket urgency and complexity
+- **💡 Solution Suggestions**: Provides initial troubleshooting steps
+
+## 🔧 Configuration
+
+- **🚀 Environment Variables**: Set up environment variables for configuration
+- **📊 MongoDB**: Configure MongoDB connection details
+
+## 🔒 Security Features
+
+- **🛡️ Password Security**: Argon2 hashing algorithm
+- **🔑 JWT Authentication**: Secure token-based authentication
+- **🚫 Rate Limiting**: API endpoint protection
+- **✅ Input Validation**: Comprehensive request validation
+- **🔐 CORS Configuration**: Cross-origin request security
+
+## 📚 Background Jobs
+
+### Inngest Functions
+
+- **🎫 Ticket Analysis**: Process new tickets with AI
+- **📧 Email Notifications**: Send automated emails
+- **📊 Analytics Processing**: Generate usage statistics
+- **🧹 Cleanup Tasks**: Periodic data maintenance
+
+### Production Checklist
+
+- [ ] Environment variables configured
+- [ ] MongoDB connection established
+- [ ] Gemini API key valid
+- [ ] Resend API configured
+- [ ] Inngest webhooks set up
+- [ ] SSL certificates installed
+- [ ] Monitoring configured
+
+## 📊 Monitoring & Analytics
+
+- **📈 Ticket Metrics**: Response times, resolution rates
+- **👥 User Analytics**: Active users, skill distribution
+- **🤖 AI Performance**: Analysis accuracy, processing time
+- **📧 Email Delivery**: Success rates, bounce tracking
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For support and questions:
+
+- 📧 Email: <contact@talhabilal.dev>
+- 📖 Portfolio: [portfolio](https://talhabilal.dev)
+- 🐛 Issues: [GitHub Issues](https://github.com/your-repo/issues)
 
 ---
 
-## 🔑 Environment Variables
+<div align="center">
 
-```plaintext
-PORT=3000
-MONGO_URI=mongodb+srv://<username>::<password>@cluster0.m8oca.mongodb.net/<database_name>?retryWrites=true&w=majority&appName=Cluster0
-JWT_SECRET=secret
-GEMINI_API_KEY=""
-RESEND_API_KEY=""
-EMAIL_FROM=""
-INNGEST_EVENT_KEY=""
-INNGEST_SIGNING_KEY=""
-APP_URL=http://localhost:3000
+**Built with ❤️ using Node.js, MongoDB, and AI**
 
-```
+[🚀 Get Started](#quick-start) • [📡 API Docs](#api-endpoints) • [🤖 AI Features](#ai-agent-workflow)
 
----
-
-## 🧠 AI Agent Flow
-
-1. User creates a ticket with title/description.
-2. Inngest triggers background worker.
-3. Worker calls Gemini API.
-4. Gemini returns helper suggestions.
-5. Suggestions saved to ticket for assigned user.
+</div>

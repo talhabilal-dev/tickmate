@@ -112,6 +112,7 @@ export const login = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "None",
+      partitioned: true,
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -119,7 +120,9 @@ export const login = async (req, res) => {
       res.cookie("adminToken", adminToken, {
         httpOnly: true,
         secure: true,
+        partitioned: true,
         sameSite: "None",
+
         maxAge: 12 * 60 * 60 * 1000,
       });
     }

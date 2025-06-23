@@ -112,7 +112,7 @@ export const login = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "None",
-      domain : ENV.COOKIE_DOMAIN,
+      domain: ENV.COOKIE_DOMAIN,
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -120,7 +120,7 @@ export const login = async (req, res) => {
       res.cookie("adminToken", adminToken, {
         httpOnly: true,
         secure: true,
-        domain : ENV.COOKIE_DOMAIN,
+        domain: ENV.COOKIE_DOMAIN,
         sameSite: "None",
         maxAge: 12 * 60 * 60 * 1000,
       });

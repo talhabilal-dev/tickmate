@@ -10,6 +10,7 @@ const ENV = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
+  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || "localhost",
   APP_URL: process.env.APP_URL,
   EMAIL_FROM: process.env.EMAIL_FROM,
 };

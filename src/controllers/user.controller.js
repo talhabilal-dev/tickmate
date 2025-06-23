@@ -152,11 +152,13 @@ export const logout = async (req, res) => {
     res.clearCookie("token", {
       httpOnly: true,
       secure: true,
+      domain: ENV.COOKIE_DOMAIN,
       sameSite: "none",
     });
     res.clearCookie("adminToken", {
       httpOnly: true,
       secure: true,
+      domain: ENV.COOKIE_DOMAIN,
       sameSite: "none",
     });
 

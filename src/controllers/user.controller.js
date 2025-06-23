@@ -102,14 +102,16 @@ export const login = async (req, res) => {
       );
     }
 
-    user.password = undefined;
     user.loginTime = Date.now();
+
+    await user.save();
+
+    user.password = undefined;
 
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
       sameSite: "None",
-      domain: ENV.NODE_ENV === "development" ? "localhost" : ENV.COOKIE_DOMAIN,
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -118,8 +120,6 @@ export const login = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "None",
-        domain:
-          ENV.NODE_ENV === "development" ? "localhost" : ENV.COOKIE_DOMAIN,
         maxAge: 12 * 60 * 60 * 1000,
       });
     }

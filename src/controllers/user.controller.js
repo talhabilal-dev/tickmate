@@ -108,30 +108,28 @@ export const login = async (req, res) => {
 
     user.password = undefined;
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      partitioned: true,
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    // res.cookie("token", token, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: "None",
+    //   maxAge: 24 * 60 * 60 * 1000,
+    // });
 
-    if (adminToken) {
-      res.cookie("adminToken", adminToken, {
-        httpOnly: true,
-        secure: true,
-        partitioned: true,
-        sameSite: "None",
-
-        maxAge: 12 * 60 * 60 * 1000,
-      });
-    }
+    // if (adminToken) {
+    //   res.cookie("adminToken", adminToken, {
+    //     httpOnly: true,
+    //     secure: true,
+    //     sameSite: "None",
+    //     maxAge: 12 * 60 * 60 * 1000,
+    //   });
+    // }
 
     return res.status(200).json({
       user,
       success: true,
       message: "User logged in successfully",
-      ...(adminToken && { adminToken }),
+      token,
+      adminToken,
     });
   } catch (error) {
     console.error("Error in login:", error);

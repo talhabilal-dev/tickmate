@@ -109,7 +109,7 @@ export const login = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "None",
-      domain : ENV.COOKIE_DOMAIN,
+      domain: ENV.NODE_ENV === "development" ? "localhost" : ENV.COOKIE_DOMAIN,
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -118,7 +118,8 @@ export const login = async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "None",
-        domain : ENV.COOKIE_DOMAIN,
+        domain:
+          ENV.NODE_ENV === "development" ? "localhost" : ENV.COOKIE_DOMAIN,
         maxAge: 12 * 60 * 60 * 1000,
       });
     }

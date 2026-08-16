@@ -44,6 +44,7 @@ export const auditActionEnum = pgEnum("audit_action", [
     "ticket_assigned",
     "ticket_completed",
     "ticket_deleted",
+    "ticket_restored",
 ]);
 export const auditEntityTypeEnum = pgEnum("audit_entity_type", [
     "auth",
@@ -72,6 +73,7 @@ type TicketReply = {
     message: string | null;
     createdAt: string | null;
     createdBy: string | null;
+    createdByName?: string | null;
 };
 
 export const ticketsTable = pgTable("tickets", {

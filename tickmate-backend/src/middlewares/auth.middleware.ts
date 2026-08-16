@@ -1,5 +1,8 @@
 import jwt from "jsonwebtoken";
 import { ENV } from "../config/env.config.js";
+import db from "../config/db.config.js";
+import { usersTable } from "../models/model.js";
+import { eq } from "drizzle-orm";
 import type { NextFunction, Request, Response } from "express";
 
 declare global {
@@ -14,9 +17,11 @@ declare global {
   }
 }
 
-
-
-export const verifyAuthToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyAuthToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     let token = req.cookies?.token;
     // Check for Bearer token in Authorization header if not in cookies
@@ -39,23 +44,45 @@ export const verifyAuthToken = (req: Request, res: Response, next: NextFunction)
     }
 
     const decoded = jwt.verify(token, ENV.JWT_SECRET);
-    req.user = decoded as {
-      userId: string;
-      role: string;
-      isActive: boolean;
+    const payload = decoded as {
+      userId: string | number;
     };
 
-    if (!req.user) {
+    const userId = Number(payload.userId);
+
+    if (!userId) {
       return res
         .status(401)
         .json({ message: "Invalid or expired token", success: false });
     }
 
-    if (!req.user.isActive) {
+    const [user] = await db
+      .select({
+        id: usersTable.id,
+        role: usersTable.role,
+        isActive: usersTable.isActive,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: "Invalid or expired token", success: false });
+    }
+
+    if (!user.isActive) {
       return res
         .status(401)
         .json({ message: "User is not active", success: false });
     }
+
+    req.user = {
+      userId: String(user.id),
+      role: user.role,
+      isActive: user.isActive,
+    };
 
     next();
   } catch (err) {

@@ -1,6 +1,9 @@
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { ENV } from "../config/env.config.js";
-import { client as qdrantClient } from "../config/vector.config.js";
+import {
+  client as qdrantClient,
+  vectorDbConfigured,
+} from "../config/vector.config.js";
 
 const COLLECTION_NAME = "tickmate_db";
 const EMBEDDING_MODEL = "text-embedding-3-small";
@@ -84,6 +87,7 @@ const buildTicketEmbeddingText = (ticket: {
 };
 
 const ensureCollection = async (vectorSize: number) => {
+  if (!qdrantClient) return;
   try {
     await qdrantClient.getCollection(COLLECTION_NAME);
     return;
@@ -101,6 +105,7 @@ const ensurePayloadIndex = async (
   fieldName: string,
   fieldSchema: "keyword" | "bool",
 ) => {
+  if (!qdrantClient) return;
   try {
     await qdrantClient.createPayloadIndex(COLLECTION_NAME, {
       field_name: fieldName,
@@ -137,13 +142,21 @@ export const upsertResolvedPublicTicketVector = async (
     return;
   }
 
+  if (!vectorDbConfigured || !ENV.OPENAI_API_KEY) {
+    console.warn(
+      "[qdrant] Vector DB not configured — skipping upsert for ticket " +
+        ticket.id
+    );
+    return;
+  }
+
   const embeddingText = buildTicketEmbeddingText(ticket);
   const vector = await getEmbeddings().embedQuery(embeddingText);
 
   await ensureCollection(vector.length);
   await ensureCollectionIndexes();
 
-  await qdrantClient.upsert(COLLECTION_NAME, {
+  await qdrantClient!.upsert(COLLECTION_NAME, {
     wait: true,
     points: [
       {
@@ -169,8 +182,12 @@ export const upsertResolvedPublicTicketVector = async (
 };
 
 export const deleteTicketVector = async (ticketId: number) => {
+  if (!vectorDbConfigured) {
+    return;
+  }
+
   try {
-    await qdrantClient.delete(COLLECTION_NAME, {
+    await qdrantClient!.delete(COLLECTION_NAME, {
       wait: true,
       points: [ticketId],
     });
@@ -191,6 +208,13 @@ export const deleteTicketVector = async (ticketId: number) => {
 export const searchSimilarResolvedPublicTickets = async (
   input: SimilarTicketSearchInput,
 ): Promise<SimilarTicketResult[]> => {
+  if (!vectorDbConfigured || !ENV.OPENAI_API_KEY) {
+    console.warn(
+      "[qdrant] Vector DB not configured — returning empty similar-ticket results."
+    );
+    return [];
+  }
+
   try {
     const configuredMinScore = Number(ENV.SIMILAR_TICKET_MIN_SCORE ?? "0.65");
     const minScore = Number.isFinite(configuredMinScore)
@@ -210,8 +234,8 @@ export const searchSimilarResolvedPublicTickets = async (
     await ensureCollection(queryVector.length);
     await ensureCollectionIndexes();
 
-    const results = await qdrantClient.search(COLLECTION_NAME, {
-      vector: queryVector,
+    const results = await qdrantClient!.query(COLLECTION_NAME, {
+      query: queryVector,
       limit: input.limit ?? 5,
       with_payload: true,
       filter: {
@@ -222,8 +246,9 @@ export const searchSimilarResolvedPublicTickets = async (
       },
     });
 
+    const points = Array.isArray(results) ? results : results?.points ?? [];
 
-    return results
+    return points
       .filter((item) => item.score >= (input.minScore ?? minScore))
       .map((item) => {
         const payload = (item.payload ?? {}) as Record<string, unknown>;

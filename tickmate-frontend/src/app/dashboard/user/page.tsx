@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,12 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { authApi, getApiErrorMessage, ticketApi } from "@/lib/api";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { getApiErrorMessage, ticketApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import {
-  LogOut,
   TrendingUp,
   CheckCircle2,
   Clock,
@@ -29,6 +26,16 @@ interface TicketStats {
   completed: number;
 }
 
+interface RecentTicket {
+  id: number;
+  title: string;
+  status: "pending" | "in_progress" | "completed";
+  priority?: "low" | "medium" | "high";
+  createdAt?: string;
+}
+
+const RECENT_TICKETS_LIMIT = 5;
+
 export default function UserDashboard() {
   const router = useRouter();
   const { toast } = useToast();
@@ -38,6 +45,7 @@ export default function UserDashboard() {
     inProgress: 0,
     completed: 0,
   });
+  const [recentTickets, setRecentTickets] = useState<RecentTicket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -48,6 +56,17 @@ export default function UserDashboard() {
 
         const summary = statsRes.summary;
         const tickets = statsRes.tickets;
+
+        const recent = Array.isArray(tickets)
+          ? [...tickets]
+              .sort(
+                (a, b) =>
+                  Date.parse(String(b.createdAt ?? "")) -
+                  Date.parse(String(a.createdAt ?? "")),
+              )
+              .slice(0, RECENT_TICKETS_LIMIT)
+          : [];
+        setRecentTickets(recent);
 
         if (summary) {
           const total = Number(summary.totalTickets ?? 0);
@@ -94,19 +113,6 @@ export default function UserDashboard() {
     fetchSummary();
   }, [router, toast]);
 
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-      toast({
-        title: "Success",
-        description: "Logged out successfully",
-      });
-      router.push("/auth/signin");
-    } catch (_error) {
-      router.push("/auth/signin");
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-background via-background to-accent/5 flex items-center justify-center">
@@ -125,30 +131,7 @@ export default function UserDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-ai opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-ai-reverse opacity-10 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2"></div>
 
-      <header className="border-b border-primary/10 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger />
-            <div>
-              <h1 className="text-2xl font-bold text-gradient-ai">
-                User Dashboard
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-primary/30"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader title="User Dashboard" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         <div className="mb-12">
@@ -227,6 +210,50 @@ export default function UserDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {recentTickets.length > 0 && (
+          <Card className="mt-8 border-primary/10">
+            <CardHeader>
+              <CardTitle>Recent Tickets</CardTitle>
+              <CardDescription>
+                Your most recently created tickets
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {recentTickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="flex items-center justify-between gap-4 rounded-md border p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {ticket.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {ticket.createdAt
+                        ? new Date(ticket.createdAt).toLocaleDateString()
+                        : "Created recently"}
+                      {ticket.priority
+                        ? ` · ${ticket.priority} priority`
+                        : ""}
+                    </p>
+                  </div>
+                  <span
+                    className={
+                      ticket.status === "completed"
+                        ? "text-xs font-medium text-green-600 dark:text-green-400"
+                        : ticket.status === "in_progress"
+                          ? "text-xs font-medium text-blue-600 dark:text-blue-400"
+                          : "text-xs font-medium text-yellow-600 dark:text-yellow-400"
+                    }
+                  >
+                    {ticket.status.replace("_", " ")}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="mt-8 border-primary/10">
           <CardHeader>

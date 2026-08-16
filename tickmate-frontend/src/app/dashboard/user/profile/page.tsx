@@ -10,16 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ProfileCard } from "@/components/profile/profile-card";
 import { EditProfileDialog } from "@/components/profile/edit-profile-dialog";
 import { ChangePasswordDialog } from "@/components/profile/change-password-dialog";
 import { DeleteAccountDialog } from "@/components/profile/delete-account-dialog";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { userApi, authApi, getApiErrorMessage } from "@/lib/api";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { userApi, getApiErrorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { UserResponse } from "@/lib/schemas";
-import { LogOut } from "lucide-react";
+import type { UserResponse } from "@/lib/schemas";
 
 export default function UserProfilePage() {
   const router = useRouter();
@@ -51,19 +49,6 @@ export default function UserProfilePage() {
 
     fetchProfile();
   }, [router, toast]);
-
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-      toast({
-        title: "Success",
-        description: "Logged out successfully",
-      });
-      router.push("/auth/signin");
-    } catch (_error) {
-      router.push("/auth/signin");
-    }
-  };
 
   const handleProfileUpdate = (updatedUser: UserResponse) => {
     setUser(updatedUser);
@@ -102,28 +87,7 @@ export default function UserProfilePage() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-ai opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-ai-reverse opacity-10 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2"></div>
 
-      <header className="border-b border-primary/10 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger />
-            <div>
-              <h1 className="text-2xl font-bold text-gradient-ai">Profile</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-primary/30"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader title="Profile" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         <div className="mb-12">
@@ -135,12 +99,7 @@ export default function UserProfilePage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           <div className="lg:col-span-2">
-            <ProfileCard
-              user={user}
-              onEditClick={() => {
-                // EditProfileDialog below handles edit actions.
-              }}
-            />
+            <ProfileCard user={user} />
           </div>
 
           <Card className="border-primary/20 shadow-lg ai-glow h-fit">

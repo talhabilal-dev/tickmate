@@ -3,12 +3,8 @@ import { ENV } from "./config/env.config.js";
 import db from "./config/db.config.js";
 import cookieParser from "cookie-parser";
 import userRoutes from "./routes/user.routes.js";
-import { inngest } from "./inngest/client.js";
-import { onUserSignup } from "./inngest/functions/on-signup.js";
-import { onUserForgotPassword } from "./inngest/functions/on-forgot-password.js";
-import { serve } from "inngest/express";
+import { inngest, inngestAvailable } from "./inngest/client.js";
 import ticketRoutes from "./routes/ticket.routes.js";
-import { onTicketCreated } from "./inngest/functions/on-ticket-create.js";
 import adminRoutes from "./routes/admin.routes.js";
 import { sql } from "drizzle-orm";
 
@@ -73,13 +69,28 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(
-  "/api/inngest",
-  serve({
-    client: inngest,
-    functions: [onUserSignup, onUserForgotPassword, onTicketCreated],
-  })
-);
+if (inngestAvailable) {
+  const [{ serve }, { onUserSignup }, { onUserForgotPassword }, { onTicketCreated }] =
+    await Promise.all([
+      import("inngest/express"),
+      import("./inngest/functions/on-signup.js"),
+      import("./inngest/functions/on-forgot-password.js"),
+      import("./inngest/functions/on-ticket-create.js"),
+    ]);
+
+  app.use(
+    "/api/inngest",
+    serve({
+      client: inngest,
+      functions: [onUserSignup, onUserForgotPassword, onTicketCreated],
+    })
+  );
+} else {
+  console.warn(
+    "[inngest] INNGEST_EVENT_KEY not configured — skipping Inngest serve."
+  );
+}
+
 app.use("/api/auth", userRoutes
 );
 

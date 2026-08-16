@@ -34,6 +34,7 @@ async function testSearch() {
 
   for (let i = 0; i < TEST_QUERIES.length; i++) {
     const query = TEST_QUERIES[i];
+    if (!query) continue;
     console.log(`\n📝 Test Query #${i + 1}:`);
     console.log(`   Title: "${query.title}"`);
     console.log(`   Description: "${query.description}"`);

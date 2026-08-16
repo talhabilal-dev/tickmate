@@ -9,9 +9,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 export const onUserSignup = inngest.createFunction(
-  { id: "on-user-signup", retries: 3 },
-  { event: "user/signup" },
-
+  { id: "on-user-signup", retries: 3, triggers: [{ event: "user/signup" }] },
   async ({ event, step }) => {
     try {
       const { email, userId } = event.data;
@@ -33,7 +31,7 @@ export const onUserSignup = inngest.createFunction(
       });
 
       const magicLink = await step.run("create-email-verification-link", async () => {
-        const { rawToken, link, expiresAt } = await generateMagicLink({
+        const { tokenHash, link, expiresAt } = await generateMagicLink({
           userId: String(user.id),
           email: user.email,
           purpose: "email_verification",
@@ -41,7 +39,7 @@ export const onUserSignup = inngest.createFunction(
 
         await db.insert(magicLinksTable).values({
           userId: user.id,
-          tokenHash: rawToken,
+          tokenHash,
           purpose: "email_verification",
           expiresAt,
         });

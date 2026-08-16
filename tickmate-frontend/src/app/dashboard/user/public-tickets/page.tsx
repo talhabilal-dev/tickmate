@@ -7,14 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { DashboardHeader } from "@/components/dashboard-header";
 import { CreateTicketDialog } from "@/components/tickets/create-ticket-dialog";
 import { TicketCard } from "@/components/tickets/ticket-card";
-import { authApi, getApiErrorMessage, ticketApi } from "@/lib/api";
+import { getApiErrorMessage, ticketApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { TicketResponse } from "@/lib/schemas";
-import { AlertCircle, LogOut, Search } from "lucide-react";
+import type { TicketResponse } from "@/lib/schemas";
+import { AlertCircle, Search } from "lucide-react";
 
 export default function PublicTicketsPage() {
   const router = useRouter();
@@ -158,19 +157,6 @@ export default function PublicTicketsPage() {
     });
   };
 
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-      toast({
-        title: "Success",
-        description: "Logged out successfully",
-      });
-      router.push("/auth/signin");
-    } catch (_error) {
-      router.push("/auth/signin");
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-background via-background to-accent/5 flex items-center justify-center">
@@ -189,30 +175,7 @@ export default function PublicTicketsPage() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-ai opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-ai-reverse opacity-10 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2"></div>
 
-      <header className="border-b border-primary/10 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger />
-            <div>
-              <h1 className="text-2xl font-bold text-gradient-ai">
-                Public Completed Tickets
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-primary/30"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader title="Public Completed Tickets" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10 space-y-6">
         <Card className="border-primary/10">

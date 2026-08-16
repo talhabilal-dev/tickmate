@@ -1,5 +1,5 @@
 import db from "../config/db.config.js";
-import { and, desc, eq, ilike, isNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, ne, not, sql } from "drizzle-orm";
 import { aiUsageLogsTable, auditLogsTable, usersTable, ticketsTable } from "../models/model.js";
 import { sendError, sendSuccess, sendZodValidationError } from "../utils/response.utils.js";
 import type { Request, Response } from "express";
@@ -10,7 +10,6 @@ import {
   loginSchema,
 } from "../schemas/user.schema.js";
 import { adminCreateTicketSchema } from "../schemas/ticket.schema.js";
-import { deleteTicketSchema } from "../schemas/ticket.schema.js";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import { ENV } from "../config/env.config.js";
@@ -23,6 +22,7 @@ import {
   deleteTicketVector,
   upsertResolvedPublicTicketVector,
 } from "../utils/vector-db.utils.js";
+import { notifyCreatorOfCompletion } from "../utils/notifier.utils.js";
 
 
 export const adminLogin = async (req: Request, res: Response) => {
@@ -724,12 +724,19 @@ export const deleteUser = async (req: Request, res: Response) => {
       });
     }
 
-    const { userId } = req.body;
-    const parsedUserId = Number(userId);
+    const parsedUserId = Number(req.params.id);
 
     if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
       return sendError(res, 400, {
         message: "Valid userId is required",
+      });
+    }
+
+    const actorUserId = Number(req.user.userId);
+
+    if (parsedUserId === actorUserId) {
+      return sendError(res, 400, {
+        message: "You cannot delete your own account",
       });
     }
 
@@ -745,6 +752,12 @@ export const deleteUser = async (req: Request, res: Response) => {
     if (!userToDelete) {
       return sendError(res, 404, {
         message: "User not found",
+      });
+    }
+
+    if (userToDelete.role === "admin") {
+      return sendError(res, 400, {
+        message: "Admin accounts cannot be deleted",
       });
     }
 
@@ -871,7 +884,7 @@ export const updateUser = async (req: Request, res: Response) => {
     return sendZodValidationError(res, validation.error.issues);
   }
 
-  const { _id, userId, role, isActive } = validation.data;
+  const { role, isActive } = validation.data;
 
   if (!req.user || req.user.role !== "admin") {
     return sendError(res, 403, {
@@ -880,11 +893,19 @@ export const updateUser = async (req: Request, res: Response) => {
   }
 
   try {
-    const parsedUserId = Number(_id ?? userId);
+    const parsedUserId = Number(req.params.id);
 
     if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
       return sendError(res, 400, {
         message: "Valid userId is required",
+      });
+    }
+
+    const actorUserId = Number(req.user.userId);
+
+    if (parsedUserId === actorUserId) {
+      return sendError(res, 400, {
+        message: "You cannot modify your own role or status",
       });
     }
 
@@ -900,6 +921,12 @@ export const updateUser = async (req: Request, res: Response) => {
     if (!existingUser) {
       return sendError(res, 404, {
         message: "User not found",
+      });
+    }
+
+    if (existingUser.role === "admin") {
+      return sendError(res, 400, {
+        message: "Admin accounts cannot be modified",
       });
     }
 
@@ -982,13 +1009,15 @@ export const updateUser = async (req: Request, res: Response) => {
 };
 
 export const toggleTicketStatusByAdmin = async (req: Request, res: Response) => {
-  const validation = deleteTicketSchema.safeParse(req.body);
+  const parsedTicketId = Number(req.params.id);
 
-  if (!validation.success) {
-    return sendZodValidationError(res, validation.error.issues);
+  if (!Number.isInteger(parsedTicketId) || parsedTicketId <= 0) {
+    return sendError(res, 400, {
+      message: "Valid ticketId is required",
+    });
   }
 
-  const { ticketId } = validation.data;
+  const ticketId = parsedTicketId;
 
   try {
     if (!req.user || req.user.role !== "admin") {
@@ -1061,6 +1090,10 @@ export const toggleTicketStatusByAdmin = async (req: Request, res: Response) => 
       },
     });
 
+    if (newStatus === "completed") {
+      void notifyCreatorOfCompletion(updatedTicket.id, "An admin");
+    }
+
     try {
       if (updatedTicket.status === "completed" && updatedTicket.isPublic) {
         await upsertResolvedPublicTicketVector(updatedTicket);
@@ -1093,13 +1126,15 @@ export const toggleTicketStatusByAdmin = async (req: Request, res: Response) => 
 };
 
 export const deleteTicketByAdmin = async (req: Request, res: Response) => {
-  const validation = deleteTicketSchema.safeParse(req.body);
+  const parsedTicketId = Number(req.params.id);
 
-  if (!validation.success) {
-    return sendZodValidationError(res, validation.error.issues);
+  if (!Number.isInteger(parsedTicketId) || parsedTicketId <= 0) {
+    return sendError(res, 400, {
+      message: "Valid ticketId is required",
+    });
   }
 
-  const { ticketId } = validation.data;
+  const ticketId = parsedTicketId;
 
   try {
     if (!req.user || req.user.role !== "admin") {
@@ -1176,6 +1211,128 @@ export const deleteTicketByAdmin = async (req: Request, res: Response) => {
       console.error("Error deleting ticket by admin:", error);
     }
 
+    return sendError(res, 500, {
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const getDeletedTickets = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || req.user.role !== "admin") {
+      return sendError(res, 403, {
+        message: "Forbidden: Admins only",
+      });
+    }
+
+    const tickets = await db
+      .select({
+        id: ticketsTable.id,
+        title: ticketsTable.title,
+        description: ticketsTable.description,
+        status: ticketsTable.status,
+        category: ticketsTable.category,
+        priority: ticketsTable.priority,
+        createdBy: ticketsTable.createdBy,
+        assignedTo: ticketsTable.assignedTo,
+        deletedAt: ticketsTable.deletedAt,
+        createdAt: ticketsTable.createdAt,
+        updatedAt: ticketsTable.updatedAt,
+      })
+      .from(ticketsTable)
+      .where(not(isNull(ticketsTable.deletedAt)))
+      .orderBy(desc(ticketsTable.deletedAt));
+
+    return sendSuccess(res, 200, {
+      message: "Deleted tickets fetched successfully",
+      tickets,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error fetching deleted tickets:", error.message);
+    } else {
+      console.error("Error fetching deleted tickets:", error);
+    }
+    return sendError(res, 500, {
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const restoreTicket = async (req: Request, res: Response) => {
+  const parsedTicketId = Number(req.params.id);
+
+  if (!Number.isInteger(parsedTicketId) || parsedTicketId <= 0) {
+    return sendError(res, 400, {
+      message: "Valid ticketId is required",
+    });
+  }
+
+  const ticketId = parsedTicketId;
+
+  try {
+    if (!req.user || req.user.role !== "admin") {
+      return sendError(res, 403, {
+        message: "Forbidden: Admins only",
+      });
+    }
+
+    const [existingTicket] = await db
+      .select({
+        id: ticketsTable.id,
+        title: ticketsTable.title,
+        deletedAt: ticketsTable.deletedAt,
+      })
+      .from(ticketsTable)
+      .where(and(eq(ticketsTable.id, ticketId), not(isNull(ticketsTable.deletedAt))));
+
+    if (!existingTicket) {
+      return sendError(res, 404, {
+        message: "Deleted ticket not found",
+      });
+    }
+
+    const [restoredTicket] = await db
+      .update(ticketsTable)
+      .set({
+        deletedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(ticketsTable.id, ticketId))
+      .returning({
+        id: ticketsTable.id,
+        title: ticketsTable.title,
+        deletedAt: ticketsTable.deletedAt,
+        updatedAt: ticketsTable.updatedAt,
+      });
+
+    if (!restoredTicket) {
+      return sendError(res, 500, {
+        message: "Failed to restore ticket",
+      });
+    }
+
+    await logAuditEventFromRequest(req, {
+      action: "ticket_restored",
+      entityType: "ticket",
+      entityId: restoredTicket.id,
+      ticketId: restoredTicket.id,
+      description: "Admin restored a ticket",
+      metadata: {
+        title: existingTicket.title,
+      },
+    });
+
+    return sendSuccess(res, 200, {
+      message: "Ticket restored successfully",
+      ticket: restoredTicket,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error restoring ticket:", error.message);
+    } else {
+      console.error("Error restoring ticket:", error);
+    }
     return sendError(res, 500, {
       message: "Internal Server Error",
     });

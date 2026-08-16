@@ -13,7 +13,8 @@ type AuditAction =
   | "ticket_updated"
   | "ticket_assigned"
   | "ticket_completed"
-  | "ticket_deleted";
+  | "ticket_deleted"
+  | "ticket_restored";
 
 type AuditEntityType = "auth" | "user" | "ticket";
 

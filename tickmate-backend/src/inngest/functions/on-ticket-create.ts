@@ -9,8 +9,7 @@ import { logAuditEvent } from "../../utils/audit-log.utils.js";
 import { upsertResolvedPublicTicketVector } from "../../utils/vector-db.utils.js";
 
 export const onTicketCreated = inngest.createFunction(
-  { id: "on-ticket-created", retries: 2 },
-  { event: "ticket/created" },
+  { id: "on-ticket-created", retries: 2, triggers: [{ event: "ticket/created" }] },
   async ({ event, step }) => {
     try {
       const { ticketId } = event.data;
@@ -133,7 +132,7 @@ export const onTicketCreated = inngest.createFunction(
           | undefined;
 
         if (relatedSkills.length > 0) {
-          const skillMatchConditions = relatedSkills.map((skill) =>
+          const skillMatchConditions = relatedSkills.map((skill: string) =>
             sql`EXISTS (
               SELECT 1
               FROM unnest(${usersTable.skills}) AS user_skill

@@ -5,74 +5,61 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { DashboardHeader } from "@/components/dashboard-header";
 import Link from "next/link";
-import { adminApi, authApi, getApiErrorMessage } from "@/lib/api";
+import { adminApi, getApiErrorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Users, BarChart3, AlertCircle, Ticket } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Users, BarChart3, AlertCircle, Ticket } from "lucide-react";
+
+type DashboardStats = {
+  totalUsers: number;
+  activeUsers: number;
+  totalTickets: number;
+  inProgressTickets: number;
+  completedTickets: number;
+};
 
 export default function AdminDashboard() {
-  const router = useRouter();
   const { toast } = useToast();
-  const [users, setUsers] = useState<
-    Array<{
-      id: number;
-      role: "user" | "moderator" | "admin";
-      isActive: boolean;
-    }>
-  >([]);
-  const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [dashboard, setDashboard] = useState<{
+    stats: DashboardStats;
+    tickets: Array<{ status: string }>;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const stats = useMemo(() => {
-    const totalUsers = users.length;
-    const activeUsers = users.filter((user) => user.isActive).length;
-    const moderators = users.filter((user) => user.role === "moderator").length;
-
-    return { totalUsers, activeUsers, moderators };
-  }, [users]);
+    const current = dashboard?.stats;
+    return {
+      totalUsers: current?.totalUsers ?? 0,
+      activeUsers: current?.activeUsers ?? 0,
+      totalTickets: current?.totalTickets ?? 0,
+      inProgressTickets: current?.inProgressTickets ?? 0,
+      completedTickets: current?.completedTickets ?? 0,
+    };
+  }, [dashboard]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchDashboard = async () => {
       try {
-        setIsUsersLoading(true);
-        const response = await adminApi.getUsers();
-        const normalizedUsers = Array.isArray(response.users)
-          ? response.users.map((user) => ({
-              id: user.id,
-              role: user.role,
-              isActive: user.isActive,
-            }))
-          : [];
-        setUsers(normalizedUsers);
+        setIsLoading(true);
+        const response = await adminApi.getDashboard();
+        setDashboard(response);
       } catch (error) {
         toast({
           title: "Error",
-          description: getApiErrorMessage(error, "Failed to load users"),
+          description: getApiErrorMessage(error, "Failed to load dashboard"),
           variant: "destructive",
         });
       } finally {
-        setIsUsersLoading(false);
+        setIsLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchDashboard();
   }, [toast]);
-
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-      router.push("/auth/signin");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      router.push("/auth/signin");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-linear-to-br from-background via-background to-accent/5 relative overflow-hidden">
@@ -80,50 +67,13 @@ export default function AdminDashboard() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-ai opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-ai-reverse opacity-10 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2"></div>
 
-      {/* Header */}
-      <header className="border-b border-primary/10 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger />
-            <div>
-              <h1 className="text-2xl font-bold text-gradient-ai">
-                Admin Control Panel
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Manage system and users
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-primary/30"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader
+        title="Admin Control Panel"
+        subtitle="Manage system and users"
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
-        {/* System Status Alert */}
-        <Card className="mb-8 border-secondary/30 bg-secondary/5">
-          <CardContent className="pt-6 flex items-center gap-4">
-            <AlertCircle className="w-6 h-6 text-secondary shrink-0" />
-            <div>
-              <p className="font-semibold">System Status</p>
-              <p className="text-sm text-muted-foreground">
-                All systems operational
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Admin Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {/* Users Management Card */}
@@ -210,12 +160,16 @@ export default function AdminDashboard() {
         {/* Admin Stats Section */}
         <div>
           <h3 className="text-xl font-bold mb-6">System Overview</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               { label: "Total Users", value: String(stats.totalUsers) },
               { label: "Active Users", value: String(stats.activeUsers) },
-              { label: "Moderators", value: String(stats.moderators) },
-              { label: "System Uptime", value: "100%" },
+              { label: "Total Tickets", value: String(stats.totalTickets) },
+              {
+                label: "In Progress",
+                value: String(stats.inProgressTickets),
+              },
+              { label: "Completed", value: String(stats.completedTickets) },
             ].map((stat) => (
               <Card key={stat.label} className="border-primary/10">
                 <CardContent className="pt-6">
@@ -231,9 +185,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {isUsersLoading && (
+        {isLoading && (
           <p className="text-sm text-muted-foreground mt-10">
-            Refreshing overview stats...
+            Loading overview stats...
           </p>
         )}
       </main>

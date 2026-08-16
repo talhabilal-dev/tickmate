@@ -1,9 +1,19 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircle, CheckCircle2, Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { z, ZodAny, ZodSchema } from "zod";
+import type { z } from "zod";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -12,25 +22,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage, ticketApi } from "@/lib/api";
+import { TICKET_CATEGORIES } from "@/lib/constants";
 import {
   createTicketSchema,
-  CreateTicketData,
-  TicketResponse,
+  type TicketResponse,
 } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
-import { Plus, Search, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface CreateTicketDialogProps {
   onTicketCreated?: (ticket: TicketResponse) => void;
@@ -122,7 +122,6 @@ export function CreateTicketDialog({
       });
       setSimilarTickets(response.tickets || []);
     } catch (error: any) {
-      console.log("[v0] Search similar tickets error:", error);
       toast({
         title: "Error",
         description: getApiErrorMessage(
@@ -151,7 +150,6 @@ export function CreateTicketDialog({
       reset();
       setSimilarTickets([]);
     } catch (error: any) {
-      console.log("[v0] Create ticket error:", error);
       toast({
         title: "Error",
         description: getApiErrorMessage(error, "Failed to create ticket"),
@@ -209,7 +207,7 @@ export function CreateTicketDialog({
               {/* Description Input */}
               <div className="space-y-2">
                 <label className="text-sm font-semibold">Description</label>
-                <Textarea
+                <AutoResizeTextarea
                   placeholder="Describe your issue or question in detail..."
                   rows={4}
                   {...register("description")}
@@ -227,9 +225,15 @@ export function CreateTicketDialog({
                   Category (Optional)
                 </label>
                 <Input
+                  list="ticket-categories"
                   placeholder="e.g., Feature Request, Bug, Question"
                   {...register("category")}
                 />
+                <datalist id="ticket-categories">
+                  {TICKET_CATEGORIES.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
               </div>
 
               {/* Search Button */}
@@ -249,10 +253,30 @@ export function CreateTicketDialog({
                   <h3 className="font-semibold">
                     Found {similarTickets.length} Similar Ticket(s)
                   </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Click a ticket to use it as a template for your new ticket.
+                  </p>
                   {similarTickets.map((ticket) => (
                     <Card
                       key={ticket.id}
-                      className="border-primary/10 cursor-default"
+                      className="border-primary/10 cursor-pointer hover:border-primary/40 transition-colors"
+                      onClick={() => {
+                        setValue("title", ticket.title, {
+                          shouldValidate: true,
+                        });
+                        setValue("description", ticket.description, {
+                          shouldValidate: true,
+                        });
+                        setValue("category", ticket.category, {
+                          shouldValidate: true,
+                        });
+                        if (ticket.relatedSkills?.length) {
+                          setValue("relatedSkills", ticket.relatedSkills, {
+                            shouldValidate: true,
+                          });
+                        }
+                        setStep("create");
+                      }}
                     >
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
@@ -282,8 +306,9 @@ export function CreateTicketDialog({
                           Found what you need?
                         </p>
                         <p className="text-green-800 dark:text-green-200 mt-1">
-                          Click on a ticket above to view the discussion, or
-                          create a new ticket if your issue is different.
+                          Click a similar ticket to use it as a starting
+                          template, or create a new ticket if your issue is
+                          different.
                         </p>
                       </div>
                     </div>
@@ -359,7 +384,7 @@ export function CreateTicketDialog({
               {/* Description */}
               <div className="space-y-2">
                 <label className="text-sm font-semibold">Description *</label>
-                <Textarea
+                <AutoResizeTextarea
                   placeholder="Provide detailed description..."
                   rows={4}
                   {...register("description")}
@@ -376,9 +401,15 @@ export function CreateTicketDialog({
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Category *</label>
                   <Input
+                    list="ticket-categories-create"
                     placeholder="e.g., Bug, Feature, Question"
                     {...register("category")}
                   />
+                  <datalist id="ticket-categories-create">
+                    {TICKET_CATEGORIES.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
                   {errors.category && (
                     <p className="text-sm text-destructive">
                       {errors.category.message}

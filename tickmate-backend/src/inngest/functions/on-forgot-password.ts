@@ -9,8 +9,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 export const onUserForgotPassword = inngest.createFunction(
-    { id: "on-user-forgot-password", retries: 3 },
-    { event: "user/forgot-password" },
+    { id: "on-user-forgot-password", retries: 3, triggers: [{ event: "user/forgot-password" }] },
     async ({ event, step }) => {
         try {
             const { email, userId } = event.data;
@@ -35,7 +34,7 @@ export const onUserForgotPassword = inngest.createFunction(
             });
 
             const magicLink = await step.run("create-password-reset-link", async () => {
-                const { rawToken, link, expiresAt } = await generateMagicLink({
+                const { tokenHash, link, expiresAt } = await generateMagicLink({
                     userId: String(user.id),
                     email: user.email,
                     purpose: "password_reset",
@@ -52,7 +51,7 @@ export const onUserForgotPassword = inngest.createFunction(
 
                 await db.insert(magicLinksTable).values({
                     userId: user.id,
-                    tokenHash: rawToken,
+                    tokenHash,
                     purpose: "password_reset",
                     expiresAt,
                 });

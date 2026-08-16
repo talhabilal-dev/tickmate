@@ -1,5 +1,6 @@
 import express, { Router } from "express";
 import { verifyAuthToken } from "../middlewares/auth.middleware.js";
+import { rateLimit } from "../middlewares/rate-limit.middleware.js";
 import {
   assignedTickets,
   createTicket,
@@ -7,23 +8,30 @@ import {
   editTicket,
   getPublicCompletedTickets,
   getSimilarResolvedTickets,
+  getTicketById,
   getTickets,
   getUserTicketSummary,
   ticketReply,
   toggleTicketStatus,
 } from "../controllers/ticket.controller.js";
 
-const router : Router = express.Router();
+const router: Router = express.Router();
+
+const createLimit = rateLimit({ windowMs: 60_000, max: 20 });
+const replyLimit = rateLimit({ windowMs: 60_000, max: 30 });
+const searchLimit = rateLimit({ windowMs: 60_000, max: 20 });
+const mutateLimit = rateLimit({ windowMs: 60_000, max: 30 });
 
 router.get("/", verifyAuthToken, getTickets);
-router.get("/public-completed", verifyAuthToken, getPublicCompletedTickets);
-router.post("/similar", verifyAuthToken, getSimilarResolvedTickets);
-router.post("/", verifyAuthToken, createTicket);
-router.put("/status/:id", verifyAuthToken, toggleTicketStatus);
-router.get("/get-assigned", verifyAuthToken, assignedTickets);
-router.put("/ticket-reply", verifyAuthToken, ticketReply);
-router.get("/tickets-summary", verifyAuthToken, getUserTicketSummary);
-router.delete("/delete-ticket", verifyAuthToken, deleteTicket);
-router.put("/edit-ticket", verifyAuthToken, editTicket);
+router.get("/assigned", verifyAuthToken, assignedTickets);
+router.get("/summary", verifyAuthToken, getUserTicketSummary);
+router.get("/public/completed", verifyAuthToken, getPublicCompletedTickets);
+router.post("/search/similar", verifyAuthToken, searchLimit, getSimilarResolvedTickets);
+router.post("/", verifyAuthToken, createLimit, createTicket);
+router.post("/:id/replies", verifyAuthToken, replyLimit, ticketReply);
+router.get("/:id", verifyAuthToken, getTicketById);
+router.patch("/:id", verifyAuthToken, mutateLimit, editTicket);
+router.patch("/:id/status", verifyAuthToken, mutateLimit, toggleTicketStatus);
+router.delete("/:id", verifyAuthToken, mutateLimit, deleteTicket);
 
 export default router;

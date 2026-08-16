@@ -39,6 +39,8 @@
   --sidebar-ring: oklch(0.6 0.24 262.806);
   --gradient-start: oklch(0.55 0.24 262.806);
   --gradient-end: oklch(0.65 0.21 301.427);
+  --badge-1: oklch(0.52 0.24 262.8);
+  --badge-2: oklch(0.5 0.22 301.4);
 }
 
 .dark {
@@ -76,6 +78,8 @@
   --sidebar-ring: oklch(0.7 0.2 265.806);
   --gradient-start: oklch(0.65 0.21 265.806);
   --gradient-end: oklch(0.58 0.22 305.427);
+  --badge-1: var(--primary);
+  --badge-2: var(--secondary);
 }
 
 @theme inline {
@@ -153,5 +157,13 @@
 
   .ai-button {
     @apply bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:shadow-lg hover:shadow-primary/30 transition-all duration-200;
+  }
+
+  .badge-gradient {
+    background-image: linear-gradient(
+      135deg,
+      var(--badge-1),
+      var(--badge-2)
+    );
   }
 }

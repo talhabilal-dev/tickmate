@@ -1,24 +1,7 @@
 "use client";
 
+import { CheckCircle2, Clock, Edit, Eye, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { TicketResponse } from "@/lib/schemas";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +13,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, Clock, CheckCircle2, Eye } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import type { TicketReplyItem, TicketResponse } from "@/lib/schemas";
 
 interface TicketCardProps {
   ticket: TicketResponse;
@@ -40,12 +40,6 @@ interface TicketCardProps {
   onReply?: (ticketId: number, message: string) => Promise<void> | void;
   isCompleting?: boolean;
 }
-
-type TicketReplyItem = {
-  message: string;
-  createdAt: string;
-  createdBy: string | number;
-};
 
 const statusColors = {
   pending:
@@ -76,8 +70,8 @@ export function TicketCard({
   const deadlineDate = ticket.deadline ? new Date(ticket.deadline) : null;
   const isOverdue = deadlineDate && deadlineDate < new Date();
   const isCompleted = ticket.status === "completed";
-  const replies = Array.isArray((ticket as any).replies)
-    ? ((ticket as any).replies as TicketReplyItem[])
+  const replies = Array.isArray(ticket.replies)
+    ? (ticket.replies as TicketReplyItem[])
     : [];
 
   const handleReply = async () => {
@@ -291,7 +285,7 @@ export function TicketCard({
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {new Date(reply.createdAt).toLocaleString()} by{" "}
-                        {reply.createdBy}
+                        {reply.createdByName || `User ${reply.createdBy}`}
                       </p>
                     </div>
                   ))}

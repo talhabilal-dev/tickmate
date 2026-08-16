@@ -1,19 +1,25 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { ENV } from "./env.config.js";
 
-if (!ENV.QDRANT_URL) {
-    throw new Error("QDRANT_URL is not configured in environment variables");
+const QDRANT_URL = ENV.QDRANT_URL;
+
+if (!QDRANT_URL) {
+  console.warn(
+    "[qdrant] QDRANT_URL is not configured — AI similar-ticket search will be unavailable."
+  );
 }
 
-if (!ENV.QDRANT_API_KEY && ENV.NODE_ENV === 'production') {
-    throw new Error("QDRANT_API_KEY is required in production");
+if (!ENV.QDRANT_API_KEY && ENV.NODE_ENV === "production") {
+  console.warn(
+    "[qdrant] QDRANT_API_KEY is not set in production — connection may fail."
+  );
 }
 
-if (!ENV.QDRANT_API_KEY) {
-    console.warn("QDRANT_API_KEY is not set - using local Qdrant without authentication");
-}
+export const client = QDRANT_URL
+  ? new QdrantClient({
+      url: QDRANT_URL,
+      ...(ENV.QDRANT_API_KEY && { apiKey: ENV.QDRANT_API_KEY }),
+    })
+  : null;
 
-export const client = new QdrantClient({
-    url: ENV.QDRANT_URL,
-    ...(ENV.QDRANT_API_KEY && { apiKey: ENV.QDRANT_API_KEY }),
-});
+export const vectorDbConfigured = Boolean(QDRANT_URL);

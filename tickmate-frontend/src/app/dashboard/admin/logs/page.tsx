@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { adminApi, authApi, getApiErrorMessage } from "@/lib/api";
+import { adminApi, getApiErrorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { DashboardHeader } from "@/components/dashboard-header";
 import { Button } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -16,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { LogOut } from "lucide-react";
 
 type AuditLogRow = {
   id: number;
@@ -51,15 +49,6 @@ export default function AdminLogsPage() {
 
   const formatDate = (value: string) => new Date(value).toLocaleDateString();
   const formatTime = (value: string) => new Date(value).toLocaleTimeString();
-
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-      router.push("/auth/signin");
-    } catch (_error) {
-      router.push("/auth/signin");
-    }
-  };
 
   useEffect(() => {
     const fetchAuditLogs = async () => {
@@ -102,33 +91,10 @@ export default function AdminLogsPage() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-ai opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-ai-reverse opacity-10 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2"></div>
 
-      <header className="border-b border-primary/10 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger />
-            <div>
-              <h1 className="text-2xl font-bold text-gradient-ai">
-                Admin Logs
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Paginated activity history of admin and system actions
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-primary/30"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader
+        title="Admin Logs"
+        subtitle="Paginated activity history of admin and system actions"
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10 space-y-6">
         <Card className="border-primary/10">

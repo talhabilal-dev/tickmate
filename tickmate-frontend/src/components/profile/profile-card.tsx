@@ -14,14 +14,12 @@ import { Mail, User, Calendar, Shield } from "lucide-react";
 
 interface ProfileCardProps {
   user: UserResponse;
-  onEditClick: () => void;
   needsEmailVerification?: boolean;
   onVerifyEmail?: () => void;
 }
 
 export function ProfileCard({
   user,
-  onEditClick,
   needsEmailVerification,
   onVerifyEmail,
 }: ProfileCardProps) {
@@ -100,11 +98,6 @@ export function ProfileCard({
             })}
           </p>
         </div>
-
-        {/* Edit Button */}
-        {/* <Button onClick={onEditClick} className="w-full ai-button">
-          Edit Profile
-        </Button> */}
       </CardContent>
     </Card>
   );

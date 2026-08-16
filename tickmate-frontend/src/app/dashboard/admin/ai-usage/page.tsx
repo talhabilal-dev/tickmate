@@ -3,12 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UsageAnalytics } from "@/components/usage/ai-usage";
-import { adminApi, authApi, getApiErrorMessage } from "@/lib/api";
+import { adminApi, getApiErrorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { LogOut } from "lucide-react";
+import { DashboardHeader } from "@/components/dashboard-header";
 
 type UsageLogView = {
   id: number;
@@ -79,15 +76,6 @@ export default function AdminAiUsagePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [usageLogs, setUsageLogs] = useState<UsageLogView[]>([]);
 
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-      router.push("/auth/signin");
-    } catch (_error) {
-      router.push("/auth/signin");
-    }
-  };
-
   useEffect(() => {
     const fetchAiUsage = async () => {
       try {
@@ -137,33 +125,10 @@ export default function AdminAiUsagePage() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-ai opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2"></div>
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-ai-reverse opacity-10 blur-3xl rounded-full translate-y-1/2 -translate-x-1/2"></div>
 
-      <header className="border-b border-primary/10 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger />
-            <div>
-              <h1 className="text-2xl font-bold text-gradient-ai">
-                Admin Control Panel
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Manage system and users
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-primary/30"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader
+        title="Admin Control Panel"
+        subtitle="Manage system and users"
+      />
 
       <main className="relative z-10">
         <UsageAnalytics data={usageLogs} />

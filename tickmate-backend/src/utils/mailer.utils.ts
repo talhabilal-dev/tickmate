@@ -1,19 +1,20 @@
 import { Resend } from "resend";
 import { ENV } from "../config/env.config.js";
 
-if (!ENV.RESEND_API_KEY) {
-  throw new Error("RESEND_API_KEY is not defined in environment variables");
-}
+const RESEND_API_KEY = ENV.RESEND_API_KEY;
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
-export const sendEmail = async (
-  to: string,
-  subject: string,
-  text: string,
-  customHtml?: string
-) => {
-  const resend = new Resend(ENV.RESEND_API_KEY);
+const appName = "TickMate";
 
-  const html = customHtml ?? `
+const resolveSender = (): string => {
+  const fromDomain = ENV.EMAIL_FROM;
+  if (fromDomain) {
+    return `${appName} <no-reply@${fromDomain}>`;
+  }
+  return `${appName} <notifications@tickmate.app>`;
+};
+
+const defaultHtml = (subject: string, text: string): string => `
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -35,6 +36,12 @@ export const sendEmail = async (
             box-shadow: 0 0 10px rgba(0,0,0,0.05);
             padding: 40px;
           }
+          .brand {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 24px;
+          }
           h1 {
             font-size: 20px;
             margin-bottom: 20px;
@@ -55,30 +62,39 @@ export const sendEmail = async (
       </head>
       <body>
         <div class="email-wrapper">
+          <div class="brand">${appName}</div>
           <h1>${subject}</h1>
           <p>Hello,</p>
-          <p>
-            We're reaching out regarding an important update. Please review the details below:
-          </p>
           <p>${text}</p>
           <p>
             If you have any questions or need assistance, feel free to reach out to our support team.
           </p>
-          <p>
-            Best regards,<br/>
-           Talha Bilal
-          </p>
           <div class="footer">
-            &copy; ${new Date().getFullYear()} Your Company. All rights reserved.
+            &copy; ${new Date().getFullYear()} ${appName}. All rights reserved.
           </div>
         </div>
       </body>
     </html>
   `;
 
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  text: string,
+  customHtml?: string
+) => {
+  if (!resend) {
+    console.warn(
+      "[mailer] RESEND_API_KEY is not configured — skipping email delivery."
+    );
+    return null;
+  }
+
+  const html = customHtml ?? defaultHtml(subject, text);
+
   try {
     const { data, error } = await resend.emails.send({
-      from: `Acme <no-reply@${ENV.EMAIL_FROM}>`,
+      from: resolveSender(),
       to,
       subject,
       text,
@@ -87,12 +103,12 @@ export const sendEmail = async (
 
     if (error) {
       console.error("Error sending email:", error);
-      throw new Error("Failed to send email");
+      return null;
     }
 
     return data;
   } catch (error) {
     console.error("Error sending email:", error);
-    throw new Error("Failed to send email");
+    return null;
   }
 };

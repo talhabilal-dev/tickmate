@@ -12,7 +12,7 @@ import {
 import { serializeUserResponse } from "../schemas/user-response.schema.js";
 import jwt from "jsonwebtoken";
 import { ENV } from "../config/env.config.js";
-import { inngest } from "../inngest/client.js";
+import { publishEvent } from "../inngest/client.js";
 import type { Request, Response } from "express";
 import {
   usersTable,
@@ -21,7 +21,7 @@ import {
   aiUsageLogsTable,
   auditLogsTable,
 } from "../models/model.js";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, lt, or } from "drizzle-orm";
 import {
   sendError,
   sendSuccess,
@@ -32,6 +32,7 @@ import {
   getClearAuthCookieOptions,
 } from "../utils/cookie.utils.js";
 import { logAuditEventFromRequest } from "../utils/audit-log.utils.js";
+import { hashMagicLinkToken } from "../utils/magic-link.utils.js";
 
 
 export const signup = async (req: Request, res: Response) => {
@@ -85,9 +86,9 @@ export const signup = async (req: Request, res: Response) => {
       createdAt: usersTable.createdAt,
     })
 
-    await inngest.send({
-      name: "user/signup",
-      data: { userId: newUser?.id, email: newUser?.email },
+    await publishEvent("user/signup", {
+      userId: newUser?.id,
+      email: newUser?.email,
     });
 
     if (!newUser) {
@@ -142,9 +143,9 @@ export const resendVerificationEmail = async (req: Request, res: Response) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
 
     if (user && !user.isActive) {
-      await inngest.send({
-        name: "user/signup",
-        data: { userId: user.id, email: user.email },
+      await publishEvent("user/signup", {
+        userId: user.id,
+        email: user.email,
       });
     }
 
@@ -189,19 +190,32 @@ export const verify = async (req: Request, res: Response) => {
     const userId = Number(payload.userId);
     const purpose = payload.purpose;
 
-    if (!userId || !purpose) {
+    if (!userId || purpose !== "email_verification") {
       return sendError(res, 400, {
         message: "Invalid token payload",
       });
     }
 
+    const tokenHash = hashMagicLinkToken(token);
+
     const [isAlreadyVerified] = await db.select().from(usersTable).where(and(eq(usersTable.id, userId), eq(usersTable.isActive, true)));
 
     if (isAlreadyVerified) {
+      await db.delete(magicLinksTable).where(
+        and(eq(magicLinksTable.userId, userId), eq(magicLinksTable.purpose, "email_verification"))
+      );
       return sendError(res, 400, {
         message: "Email is already verified",
       });
     }
+
+    await db.delete(magicLinksTable).where(
+      and(
+        eq(magicLinksTable.userId, userId),
+        eq(magicLinksTable.purpose, "email_verification"),
+        lt(magicLinksTable.expiresAt, new Date())
+      )
+    );
 
     const [verificationRecords] = await db
       .select()
@@ -209,9 +223,10 @@ export const verify = async (req: Request, res: Response) => {
       .where(
         and(
           eq(magicLinksTable.userId, userId),
-          eq(magicLinksTable.purpose, purpose as "email_verification" | "password_reset" | "password_change")
+          eq(magicLinksTable.purpose, "email_verification"),
+          eq(magicLinksTable.tokenHash, tokenHash)
         )
-      );
+      ).limit(1);
 
     if (!verificationRecords) {
       return sendError(res, 400, {
@@ -221,13 +236,24 @@ export const verify = async (req: Request, res: Response) => {
 
 
     if (verificationRecords?.expiresAt < new Date()) {
+      await db.delete(magicLinksTable).where(
+        and(
+          eq(magicLinksTable.userId, userId),
+          eq(magicLinksTable.purpose, "email_verification")
+        )
+      );
       return sendError(res, 400, {
         message: "Token has expired",
       });
     }
 
     await db.update(usersTable).set({ isActive: true }).where(eq(usersTable.id, userId));
-    await db.delete(magicLinksTable).where(eq(magicLinksTable.id, verificationRecords.id));
+    await db.delete(magicLinksTable).where(
+      and(
+        eq(magicLinksTable.userId, userId),
+        eq(magicLinksTable.purpose, "email_verification")
+      )
+    );
 
     return sendSuccess(res, 200, {
       message: "Email verified successfully",
@@ -588,9 +614,9 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
 
     if (user) {
-      await inngest.send({
-        name: "user/forgot-password",
-        data: { userId: user.id, email: user.email },
+      await publishEvent("user/forgot-password", {
+        userId: user.id,
+        email: user.email,
       });
     }
 
@@ -639,6 +665,16 @@ export const resetPassword = async (req: Request, res: Response) => {
       });
     }
 
+    const tokenHash = hashMagicLinkToken(token);
+
+    await db.delete(magicLinksTable).where(
+      and(
+        eq(magicLinksTable.userId, userId),
+        eq(magicLinksTable.purpose, "password_reset"),
+        lt(magicLinksTable.expiresAt, new Date())
+      )
+    );
+
     const [resetRecord] = await db
       .select()
       .from(magicLinksTable)
@@ -646,9 +682,9 @@ export const resetPassword = async (req: Request, res: Response) => {
         and(
           eq(magicLinksTable.userId, userId),
           eq(magicLinksTable.purpose, "password_reset"),
-          eq(magicLinksTable.tokenHash, token)
+          eq(magicLinksTable.tokenHash, tokenHash)
         )
-      );
+      ).limit(1);
 
     if (!resetRecord) {
       return sendError(res, 400, {
@@ -657,6 +693,12 @@ export const resetPassword = async (req: Request, res: Response) => {
     }
 
     if (resetRecord.expiresAt < new Date()) {
+      await db.delete(magicLinksTable).where(
+        and(
+          eq(magicLinksTable.userId, userId),
+          eq(magicLinksTable.purpose, "password_reset")
+        )
+      );
       return sendError(res, 400, {
         message: "Token has expired",
       });
@@ -676,7 +718,12 @@ export const resetPassword = async (req: Request, res: Response) => {
       });
     }
 
-    await db.delete(magicLinksTable).where(eq(magicLinksTable.id, resetRecord.id));
+    await db.delete(magicLinksTable).where(
+      and(
+        eq(magicLinksTable.userId, userId),
+        eq(magicLinksTable.purpose, "password_reset")
+      )
+    );
 
     return sendSuccess(res, 200, {
       message: "Password reset successfully",

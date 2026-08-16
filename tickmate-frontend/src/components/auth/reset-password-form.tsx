@@ -55,7 +55,6 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
       setSubmitted(true);
     } catch (error: any) {
-      console.log("[v0] Reset password error:", error);
       toast({
         title: "Error",
         description:

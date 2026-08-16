@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { ENV } from "../config/env.config.js";
 
@@ -16,9 +17,13 @@ type GenerateMagicLinkInput = {
 
 type GenerateMagicLinkResult = {
     rawToken: string;
+    tokenHash: string;
     link: string;
     expiresAt: Date;
 };
+
+export const hashMagicLinkToken = (rawToken: string): string =>
+    crypto.createHash("sha256").update(rawToken).digest("hex");
 
 const getMagicLinkPath = (purpose: MagicLinkPurpose): string => {
     if (purpose === "email_verification") {
@@ -75,6 +80,7 @@ export const generateMagicLink = async ({
 
     return {
         rawToken,
+        tokenHash: hashMagicLinkToken(rawToken),
         link: linkUrl.toString(),
         expiresAt,
     };

@@ -13,10 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage, ticketApi } from "@/lib/api";
+import { TICKET_CATEGORIES } from "@/lib/constants";
 import {
   editTicketSchema,
   EditTicketData,
@@ -78,7 +79,6 @@ export function EditTicketDialog({
       }
       onOpenChange(false);
     } catch (error: any) {
-      console.log("[v0] Update ticket error:", error);
       toast({
         title: "Error",
         description: getApiErrorMessage(error, "Failed to update ticket"),
@@ -110,7 +110,7 @@ export function EditTicketDialog({
           {/* Description */}
           <div className="space-y-2">
             <label className="text-sm font-semibold">Description</label>
-            <Textarea
+            <AutoResizeTextarea
               placeholder="Ticket description"
               rows={4}
               {...register("description")}
@@ -125,7 +125,16 @@ export function EditTicketDialog({
           {/* Category */}
           <div className="space-y-2">
             <label className="text-sm font-semibold">Category</label>
-            <Input placeholder="Category" {...register("category")} />
+            <Input
+              list="edit-ticket-categories"
+              placeholder="Category"
+              {...register("category")}
+            />
+            <datalist id="edit-ticket-categories">
+              {TICKET_CATEGORIES.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
           </div>
 
           {/* Priority and Deadline Grid */}
@@ -156,7 +165,7 @@ export function EditTicketDialog({
           {/* Helpful Notes */}
           <div className="space-y-2">
             <label className="text-sm font-semibold">Helpful Notes</label>
-            <Textarea
+            <AutoResizeTextarea
               placeholder="Any additional notes..."
               rows={3}
               {...register("helpfulNotes", {

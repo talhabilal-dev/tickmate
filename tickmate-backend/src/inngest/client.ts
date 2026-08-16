@@ -1,11 +1,25 @@
 import { Inngest } from "inngest";
 import { ENV } from "../config/env.config.js";
 
-if (!ENV.INNGEST_EVENT_KEY) {
-  throw new Error("INNGEST_EVENT_KEY is not defined in environment variables.");
-}
+const eventKey = ENV.INNGEST_EVENT_KEY;
 
 export const inngest = new Inngest({
   id: "tick-mate",
-  eventKey: ENV.INNGEST_EVENT_KEY,
+  ...(eventKey ? { eventKey } : {}),
 });
+
+export const inngestAvailable = Boolean(eventKey);
+
+export const publishEvent = async (name: string, data: unknown) => {
+  if (!inngestAvailable) {
+    console.warn(`[inngest] Not configured — skipping event "${name}"`);
+    return null;
+  }
+
+  try {
+    return await inngest.send({ name, data });
+  } catch (error) {
+    console.error(`[inngest] Failed to send event "${name}":`, error);
+    return null;
+  }
+};

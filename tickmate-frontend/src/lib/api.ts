@@ -24,7 +24,7 @@ export const getApiErrorMessage = (
   if (axios.isAxiosError(error)) {
     const payload = error.response?.data as ApiErrorPayload | undefined;
 
-    if (payload?.message && payload.message.trim()) {
+    if (payload?.message?.trim()) {
       return payload.message;
     }
 
@@ -238,16 +238,14 @@ export const ticketApi = {
   },
 
   getTicketStats: async (): Promise<GetTicketStatsResponse> => {
-    const response = await apiClient.get<GetTicketStatsResponse>(
-      "/tickets/tickets-summary",
-    );
+    const response =
+      await apiClient.get<GetTicketStatsResponse>("/tickets/summary");
     return response.data;
   },
 
   getAssignedTickets: async (): Promise<GetMyTicketsResponse> => {
-    const response = await apiClient.get<GetMyTicketsResponse>(
-      "/tickets/get-assigned",
-    );
+    const response =
+      await apiClient.get<GetMyTicketsResponse>("/tickets/assigned");
     return response.data;
   },
 
@@ -266,8 +264,8 @@ export const ticketApi = {
 
     const queryString = params.toString();
     const endpoint = queryString
-      ? `/tickets/public-completed?${queryString}`
-      : "/tickets/public-completed";
+      ? `/tickets/public/completed?${queryString}`
+      : "/tickets/public/completed";
 
     const response =
       await apiClient.get<PublicCompletedTicketsResponse>(endpoint);
@@ -288,7 +286,7 @@ export const ticketApi = {
     data: SearchSimilarTicketsRequest,
   ): Promise<SearchSimilarTicketsResponse> => {
     const response = await apiClient.post<SearchSimilarTicketsResponse>(
-      "/tickets/similar",
+      "/tickets/search/similar",
       data,
     );
     return response.data;
@@ -303,12 +301,9 @@ export const ticketApi = {
     data: UpdateTicketRequest,
   ): Promise<UpdateTicketResponse> => {
     const { ticketId, ...updateData } = data;
-    const response = await apiClient.put<UpdateTicketResponse>(
-      "/tickets/edit-ticket",
-      {
-        ticketId,
-        ...updateData,
-      },
+    const response = await apiClient.patch<UpdateTicketResponse>(
+      `/tickets/${ticketId}`,
+      updateData,
     );
     return response.data;
   },
@@ -316,8 +311,8 @@ export const ticketApi = {
   markTicketCompleted: async (
     ticketId: number,
   ): Promise<ToggleTicketStatusResponse> => {
-    const response = await apiClient.put<ToggleTicketStatusResponse>(
-      `/tickets/status/${ticketId}`,
+    const response = await apiClient.patch<ToggleTicketStatusResponse>(
+      `/tickets/${ticketId}/status`,
     );
     return response.data;
   },
@@ -325,19 +320,17 @@ export const ticketApi = {
   replyToTicket: async (
     data: TicketReplyRequest,
   ): Promise<TicketReplyResponse> => {
-    const response = await apiClient.put<TicketReplyResponse>(
-      "/tickets/ticket-reply",
-      data,
+    const { ticketId, message } = data;
+    const response = await apiClient.post<TicketReplyResponse>(
+      `/tickets/${ticketId}/replies`,
+      { message },
     );
     return response.data;
   },
 
   deleteTicket: async (ticketId: number): Promise<DeleteTicketResponse> => {
     const response = await apiClient.delete<DeleteTicketResponse>(
-      "/tickets/delete-ticket",
-      {
-        data: { ticketId },
-      },
+      `/tickets/${ticketId}`,
     );
     return response.data;
   },
@@ -469,6 +462,19 @@ type GetAdminAuditLogsResponse = ApiSuccessResponse & {
   pagination: AdminAuditLogsPagination;
 };
 
+type GetAdminDashboardResponse = ApiSuccessResponse & {
+  adminProfile: AdminUser;
+  users: AdminUser[];
+  tickets: TicketResponse[];
+  stats: {
+    totalUsers: number;
+    totalTickets: number;
+    inProgressTickets: number;
+    completedTickets: number;
+    activeUsers: number;
+  };
+};
+
 export const adminApi = {
   getUsers: async (): Promise<GetAdminUsersResponse> => {
     const response = await apiClient.get<GetAdminUsersResponse>("/admin/users");
@@ -480,19 +486,17 @@ export const adminApi = {
     role?: "user" | "moderator" | "admin";
     isActive?: boolean;
   }): Promise<UpdateAdminUserResponse> => {
-    const response = await apiClient.put<UpdateAdminUserResponse>(
-      "/admin/update-user",
-      data,
+    const { userId, ...updateData } = data;
+    const response = await apiClient.patch<UpdateAdminUserResponse>(
+      `/admin/users/${userId}`,
+      updateData,
     );
     return response.data;
   },
 
   deleteUser: async (userId: number): Promise<ApiSuccessResponse> => {
     const response = await apiClient.delete<ApiSuccessResponse>(
-      "/admin/delete-user",
-      {
-        data: { userId },
-      },
+      `/admin/users/${userId}`,
     );
     return response.data;
   },
@@ -538,19 +542,15 @@ export const adminApi = {
   toggleTicketStatus: async (
     ticketId: number,
   ): Promise<ToggleAdminTicketStatusResponse> => {
-    const response = await apiClient.put<ToggleAdminTicketStatusResponse>(
-      "/admin/tickets/toggle-status",
-      { ticketId },
+    const response = await apiClient.patch<ToggleAdminTicketStatusResponse>(
+      `/admin/tickets/${ticketId}`,
     );
     return response.data;
   },
 
   deleteTicket: async (ticketId: number): Promise<ApiSuccessResponse> => {
     const response = await apiClient.delete<ApiSuccessResponse>(
-      "/admin/tickets/delete-ticket",
-      {
-        data: { ticketId },
-      },
+      `/admin/tickets/${ticketId}`,
     );
     return response.data;
   },
@@ -598,6 +598,56 @@ export const adminApi = {
       : "/admin/audit-logs";
 
     const response = await apiClient.get<GetAdminAuditLogsResponse>(endpoint);
+    return response.data;
+  },
+
+  getDashboard: async (): Promise<GetAdminDashboardResponse> => {
+    const response =
+      await apiClient.get<GetAdminDashboardResponse>("/admin/dashboard");
+    return response.data;
+  },
+
+  createUser: async (data: {
+    name: string;
+    username: string;
+    email: string;
+    password: string;
+    skills?: string[];
+    role?: "user" | "moderator" | "admin";
+  }): Promise<UpdateAdminUserResponse> => {
+    const response = await apiClient.post<UpdateAdminUserResponse>(
+      "/admin/users",
+      data,
+    );
+    return response.data;
+  },
+
+  createTicket: async (data: {
+    title: string;
+    description: string;
+    category: string;
+    assignedTo: number;
+    helpfulNotes: string;
+    priority?: "low" | "medium" | "high";
+    deadline?: Date;
+    relatedSkills?: string[];
+    isPublic?: boolean;
+  }) => {
+    const response = await apiClient.post("/admin/tickets", data);
+    return response.data;
+  },
+
+  getDeletedTickets: async (): Promise<
+    ApiSuccessResponse & { tickets: Array<Record<string, unknown>> }
+  > => {
+    const response = await apiClient.get("/admin/tickets/deleted");
+    return response.data;
+  },
+
+  restoreTicket: async (ticketId: number): Promise<ApiSuccessResponse> => {
+    const response = await apiClient.post<ApiSuccessResponse>(
+      `/admin/tickets/${ticketId}/restore`,
+    );
     return response.data;
   },
 };

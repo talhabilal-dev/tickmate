@@ -1,10 +1,18 @@
 import zod from "zod";
 
+const strongPassword = (label: string) =>
+  zod
+    .string()
+    .min(8, `${label} must be at least 8 characters long`)
+    .regex(/[A-Z]/, `${label} must contain at least one uppercase letter`)
+    .regex(/[a-z]/, `${label} must contain at least one lowercase letter`)
+    .regex(/[0-9]/, `${label} must contain at least one number`);
+
 export const signupSchema = zod.object({
     name: zod.string().min(1, "Name is required"),
     username: zod.string().min(3, "Username must be at least 3 characters long"),
     email: zod.string().email("Invalid email address"),
-    password: zod.string().min(6, "Password must be at least 6 characters long"),
+    password: strongPassword("Password"),
     skills: zod.array(zod.string()).optional(),
 });
 
@@ -14,7 +22,7 @@ export const verifySchema = zod.object({
 
 export const loginSchema = zod.object({
     identifier: zod.string().min(1, "Email or username is required"),
-    password: zod.string().min(6, "Password must be at least 6 characters long"),
+    password: zod.string().min(1, "Password is required"),
 });
 
 export const forgotPasswordSchema = zod.object({
@@ -23,7 +31,7 @@ export const forgotPasswordSchema = zod.object({
 
 export const resetPasswordSchema = zod.object({
     token: zod.string().min(1, "Token is required"),
-    newPassword: zod.string().min(6, "Password must be at least 6 characters long"),
+    newPassword: strongPassword("Password"),
 });
 
 export const updateUserSchema = zod.object({
@@ -41,7 +49,7 @@ export const adminCreateUserSchema = zod.object({
     name: zod.string().min(1, "Name is required"),
     username: zod.string().min(3, "Username must be at least 3 characters long"),
     email: zod.string().email("Invalid email address"),
-    password: zod.string().min(6, "Password must be at least 6 characters long"),
+    password: strongPassword("Password"),
     skills: zod.array(zod.string()).optional(),
     role: zod.enum(["user", "moderator", "admin"]).optional(),
 });

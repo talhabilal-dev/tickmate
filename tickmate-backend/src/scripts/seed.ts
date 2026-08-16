@@ -360,6 +360,10 @@ async function seed() {
         })
         .returning({ id: usersTable.id });
 
+      if (!user) {
+        throw new Error(`Failed to create user ${userData.username}`);
+      }
+
       createdUsers[userData.username] = user.id;
       console.log(`   ✅ Created ${userData.role}: ${userData.username} (ID: ${user.id})`);
     }
@@ -370,13 +374,14 @@ async function seed() {
 
     for (let i = 0; i < SAMPLE_TICKETS.length; i++) {
       const ticketData = SAMPLE_TICKETS[i];
+      if (!ticketData) continue;
 
       // Randomly assign creator (prefer regular users)
       const userKeys = Object.keys(createdUsers);
       const regularUsers = userKeys.filter(k => k.startsWith("user"));
-      const creatorKey = regularUsers.length > 0
+      const creatorKey = (regularUsers.length > 0
         ? regularUsers[Math.floor(Math.random() * regularUsers.length)]
-        : userKeys[Math.floor(Math.random() * userKeys.length)];
+        : userKeys[Math.floor(Math.random() * userKeys.length)])!;
 
       // Assign to moderator based on skills for completed tickets
       let assignedToId = null;
@@ -389,8 +394,8 @@ async function seed() {
           );
         });
         assignedToId = matchingModerator
-          ? createdUsers[matchingModerator]
-          : createdUsers["john_mod"];
+          ? createdUsers[matchingModerator]!
+          : createdUsers["john_mod"]!;
       }
 
       const [ticket] = await db
@@ -404,11 +409,15 @@ async function seed() {
           isPublic: ticketData.isPublic,
           helpfulNotes: ticketData.helpfulNotes || null,
           relatedSkills: ticketData.relatedSkills,
-          createdBy: createdUsers[creatorKey],
+          createdBy: createdUsers[creatorKey]!,
           assignedTo: assignedToId,
           createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000), // Random date within last 30 days
         })
         .returning();
+
+      if (!ticket) {
+        throw new Error(`Failed to create ticket ${ticketData.title}`);
+      }
 
       console.log(`   ✅ Created ticket #${ticket.id}: "${ticketData.title}" [${ticketData.status}]`);
 

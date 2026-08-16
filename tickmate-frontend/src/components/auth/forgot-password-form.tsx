@@ -50,7 +50,6 @@ export default function ForgotPasswordForm({
       setSubmitted(true);
       onSuccess?.();
     } catch (error: any) {
-      console.log("[v0] Forgot password error:", error);
       toast({
         title: "Error",
         description:

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { inngest } from "../inngest/client.js";
+import { publishEvent } from "../inngest/client.js";
 import { usersTable, ticketsTable } from "../models/model.js";
 import db from "../config/db.config.js";
 import { and, desc, eq, gte, isNull, lt } from "drizzle-orm";
@@ -10,7 +10,6 @@ import {
 } from "../utils/response.utils.js";
 import {
   createTicketSchema,
-  deleteTicketSchema,
   editTicketSchema,
   publicCompletedTicketsFilterSchema,
   similarTicketSearchSchema,
@@ -22,6 +21,7 @@ import {
   upsertResolvedPublicTicketVector,
 } from "../utils/vector-db.utils.js";
 import { logAuditEventFromRequest } from "../utils/audit-log.utils.js";
+import { notifyCreatorOfReply } from "../utils/notifier.utils.js";
 
 export const getSimilarResolvedTickets = async (
   req: Request,
@@ -137,14 +137,11 @@ export const createTicket = async (req: Request, res: Response) => {
       return sendError(res, 500, { message: "Failed to create ticket" });
     }
 
-    await inngest.send({
-      name: "ticket/created",
-      data: {
-        ticketId: newTicket.id.toString(),
-        title,
-        description,
-        createdBy: req.user.userId,
-      },
+    await publishEvent("ticket/created", {
+      ticketId: newTicket.id.toString(),
+      title,
+      description,
+      createdBy: req.user.userId,
     });
 
     await logAuditEventFromRequest(req, {
@@ -220,6 +217,75 @@ export const getTickets = async (req: Request, res: Response) => {
       console.error("Error fetching tickets", error.message);
     } else {
       console.error("Error fetching tickets", error);
+    }
+    return sendError(res, 500, { message: "Internal Server Error" });
+  }
+};
+
+export const getTicketById = async (req: Request, res: Response) => {
+  try {
+    if (!req.user?.userId) {
+      return sendError(res, 401, { message: "Unauthorized" });
+    }
+
+    const ticketId = Number(req.params.id);
+
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      return sendError(res, 400, {
+        message: "Valid ticket id is required",
+      });
+    }
+
+    const userId = Number(req.user.userId);
+
+    const [ticket] = await db
+      .select({
+        id: ticketsTable.id,
+        title: ticketsTable.title,
+        description: ticketsTable.description,
+        status: ticketsTable.status,
+        category: ticketsTable.category,
+        priority: ticketsTable.priority,
+        deadline: ticketsTable.deadline,
+        helpfulNotes: ticketsTable.helpfulNotes,
+        relatedSkills: ticketsTable.relatedSkills,
+        replies: ticketsTable.replies,
+        isPublic: ticketsTable.isPublic,
+        createdBy: ticketsTable.createdBy,
+        assignedTo: ticketsTable.assignedTo,
+        createdAt: ticketsTable.createdAt,
+        updatedAt: ticketsTable.updatedAt,
+      })
+      .from(ticketsTable)
+      .where(and(eq(ticketsTable.id, ticketId), isNull(ticketsTable.deletedAt)))
+      .limit(1);
+
+    if (!ticket) {
+      return sendError(res, 404, {
+        message: "Ticket not found",
+      });
+    }
+
+    const canAccess =
+      ticket.createdBy === userId ||
+      ticket.assignedTo === userId ||
+      req.user?.role === "admin";
+
+    if (!canAccess) {
+      return sendError(res, 403, {
+        message: "You are not allowed to view this ticket",
+      });
+    }
+
+    return sendSuccess(res, 200, {
+      message: "Ticket fetched successfully",
+      ticket,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error fetching ticket by id", error.message);
+    } else {
+      console.error("Error fetching ticket by id", error);
     }
     return sendError(res, 500, { message: "Internal Server Error" });
   }
@@ -480,24 +546,28 @@ export const ticketReply = async (req: Request, res: Response) => {
       return sendError(res, 401, { message: "Unauthorized" });
     }
 
+    const ticketId = Number(req.params.id);
+
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      return sendError(res, 400, {
+        message: "Valid ticket id is required",
+      });
+    }
+
     const validation = ticketReplySchema.safeParse(req.body);
 
     if (!validation.success) {
       return sendZodValidationError(res, validation.error.issues);
     }
 
-    const { message, ticketId } = validation.data;
-    if (req.user.role !== "moderator" && req.user.role !== "admin") {
-      return sendError(res, 403, {
-        message: "Forbidden: Moderators and Admins only",
-      });
-    }
+    const { message } = validation.data;
 
     const [ticket] = await db
       .select({
         id: ticketsTable.id,
         status: ticketsTable.status,
         assignedTo: ticketsTable.assignedTo,
+        createdBy: ticketsTable.createdBy,
         replies: ticketsTable.replies,
       })
       .from(ticketsTable)
@@ -517,15 +587,25 @@ export const ticketReply = async (req: Request, res: Response) => {
       });
     }
 
+    const userId = Number(req.user.userId);
     const isAdmin = req.user.role === "admin";
     const isAssignedModerator =
-      ticket.assignedTo && ticket.assignedTo === Number(req.user.userId);
+      ticket.assignedTo && ticket.assignedTo === userId;
+    const isCreator = ticket.createdBy === userId;
 
-    if (!isAdmin && !isAssignedModerator) {
+    if (!isAdmin && !isAssignedModerator && !isCreator) {
       return sendError(res, 403, {
         message: "You are not allowed to reply to this ticket",
       });
     }
+
+    const [replier] = await db
+      .select({ name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+
+    const replierName = replier?.name ?? "A team member";
 
     const existingReplies = Array.isArray(ticket.replies) ? ticket.replies : [];
 
@@ -535,6 +615,7 @@ export const ticketReply = async (req: Request, res: Response) => {
         message,
         createdAt: new Date().toISOString(),
         createdBy: req.user.userId,
+        createdByName: replierName,
       },
     ];
 
@@ -581,6 +662,11 @@ export const ticketReply = async (req: Request, res: Response) => {
         replyLength: message.length,
       },
     });
+
+    const isReplier = updatedTicket.createdBy === userId;
+    if (!isReplier) {
+      void notifyCreatorOfReply(updatedTicket.id, message, replierName);
+    }
 
     return sendSuccess(res, 200, {
       message: "Ticket reply updated",
@@ -695,13 +781,13 @@ export const deleteTicket = async (req: Request, res: Response) => {
       return sendError(res, 401, { message: "Unauthorized" });
     }
 
-    const validation = deleteTicketSchema.safeParse(req.body);
+    const ticketId = Number(req.params.id);
 
-    if (!validation.success) {
-      return sendZodValidationError(res, validation.error.issues);
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      return sendError(res, 400, {
+        message: "Valid ticket id is required",
+      });
     }
-
-    const { ticketId } = validation.data;
 
     const [ticket] = await db
       .select({
@@ -810,14 +896,21 @@ export const editTicket = async (req: Request, res: Response) => {
       return sendError(res, 401, { message: "Unauthorized" });
     }
 
-    const validation = editTicketSchema.safeParse(req.body);
+    const ticketId = Number(req.params.id);
+
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      return sendError(res, 400, {
+        message: "Valid ticket id is required",
+      });
+    }
+
+    const validation = editTicketSchema.omit({ ticketId: true }).safeParse(req.body);
 
     if (!validation.success) {
       return sendZodValidationError(res, validation.error.issues);
     }
 
     const {
-      ticketId,
       title,
       description,
       category,

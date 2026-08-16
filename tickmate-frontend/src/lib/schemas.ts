@@ -51,7 +51,7 @@ export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
 const resetPasswordFieldRules = {
   newPassword: z
     .string()
-    .min(6, "Password must be at least 6 characters long")
+    .min(8, "Password must be at least 8 characters long")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number"),
@@ -111,7 +111,7 @@ export const resetPasswordSchema = z
     currentPassword: z.string().min(1, "Current password is required"),
     newPassword: z
       .string()
-      .min(6, "Password must be at least 6 characters long")
+      .min(8, "Password must be at least 8 characters long")
       .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
       .regex(/[a-z]/, "Password must contain at least one lowercase letter")
       .regex(/[0-9]/, "Password must contain at least one number"),
@@ -194,6 +194,15 @@ export const deleteTicketSchema = z.object({
 
 export type DeleteTicketData = z.infer<typeof deleteTicketSchema>;
 
+export const ticketReplyItemSchema = z.object({
+  message: z.string(),
+  createdAt: z.string(),
+  createdBy: z.string(),
+  createdByName: z.string().nullable().optional(),
+});
+
+export type TicketReplyItem = z.infer<typeof ticketReplyItemSchema>;
+
 export const ticketResponseSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -206,6 +215,8 @@ export const ticketResponseSchema = z.object({
   helpfulNotes: z.string().nullable(),
   isPublic: z.boolean(),
   createdBy: z.number(),
+  assignedTo: z.number().nullable().optional(),
+  replies: z.array(ticketReplyItemSchema).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

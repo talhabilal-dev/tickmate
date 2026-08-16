@@ -29,21 +29,26 @@ type TokenUsageMetrics = {
 };
 
 const openaiApiKey = ENV.OPENAI_API_KEY;
-if (!openaiApiKey) {
-  throw new Error("OPENAI_API_KEY is required to analyze tickets");
-}
 
-new ChatOpenAI({
+let modelCache: ChatOpenAI | null = null;
 
-})
+const getModel = (): ChatOpenAI | null => {
+  if (!openaiApiKey) {
+    return null;
+  }
 
-const model = new ChatOpenAI({
-  model: "gpt-4.1-mini",
-  temperature: 0.1,
-  maxRetries: 2,
-  timeout: 15000,
-  maxTokens: 500,
-});
+  if (!modelCache) {
+    modelCache = new ChatOpenAI({
+      model: "gpt-4.1-mini",
+      temperature: 0.1,
+      maxRetries: 2,
+      timeout: 15000,
+      maxTokens: 500,
+    });
+  }
+
+  return modelCache;
+};
 
 const resolveTokenUsage = (response: unknown): TokenUsageMetrics => {
   const metadata =
@@ -217,6 +222,15 @@ const readModelContent = (
 const analyzeTicket = async (
   ticket: AnalyzeTicketInput
 ): Promise<TicketAnalysis | null> => {
+  const model = getModel();
+
+  if (!model) {
+    console.warn(
+      "[agent] OPENAI_API_KEY is not configured — skipping ticket analysis."
+    );
+    return null;
+  }
+
   try {
     const response = await model.invoke([
       new SystemMessage(SYSTEM_PROMPT),

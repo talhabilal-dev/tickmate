@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Password Reset</title>
+	<style>
+		body,
+		html {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			background-color: #0b0f19;
+			color: #ffffff;
+		}
+
+		a {
+			text-decoration: none;
+		}
+
+		.container {
+			max-width: 600px;
+			margin: 40px auto;
+			border-radius: 12px;
+			overflow: hidden;
+			background-color: #111827;
+			box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+		}
+
+		.header {
+			padding: 40px 20px;
+			text-align: center;
+			background: linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd);
+			color: #ffffff;
+		}
+
+		.header h1 {
+			font-size: 32px;
+			font-weight: bold;
+			margin: 0;
+		}
+
+		.header p {
+			color: #e0e7ff;
+			margin: 8px 0 0;
+			font-size: 16px;
+		}
+
+		.content {
+			padding: 30px 20px;
+			background-color: #1f2937;
+			text-align: center;
+			color: #e5e7eb;
+		}
+
+		.content p {
+			font-size: 16px;
+			margin: 15px 0;
+		}
+
+		.magic-link {
+			display: inline-block;
+			padding: 15px 30px;
+			margin: 25px 0;
+			font-size: 16px;
+			font-weight: bold;
+			background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);
+			color: #fff;
+			border-radius: 8px;
+			transition: all 0.3s ease;
+			box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+		}
+
+		.magic-link:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 6px 20px rgba(59, 130, 246, 0.7);
+		}
+
+		.footer {
+			padding: 20px;
+			font-size: 12px;
+			text-align: center;
+			color: #9ca3af;
+			background-color: #111827;
+		}
+
+		.footer a {
+			color: #60a5fa;
+			text-decoration: none;
+		}
+
+		@media (max-width: 600px) {
+			.container {
+				width: 90% !important;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<div class="header">
+			<h1>AppName</h1>
+			<p>Secure Password Reset</p>
+		</div>
+		<div class="content">
+			<p>Hello,</p>
+			<p>You requested to reset your <strong>AppName</strong> password. Click the button below to continue using
+				your magic link:</p>
+			<a href="{{MAGIC_LINK}}" class="magic-link">Reset Password</a>
+			<p>If you didn't request this, you can safely ignore this email.</p>
+		</div>
+		<div class="footer">
+			&copy; 2026 AppName • Developed by DeveloperName<br>
+			<a href="https://yourcompany.com">Visit our website</a>
+		</div>
+	</div>
+</body>
+
+</html>

@@ -1,0 +1,118 @@
+### TickMate backend user route tests
+### Works with VS Code REST Client extension (.http files)
+### Install: Huachao Mao -> REST Client
+
+@baseUrl = http://localhost:3000/api/auth
+
+### -----------------------------
+### Sample test data
+### -----------------------------
+@email = admin@mail.com
+@username = adminuser
+@name = Admin
+@password = admin123!
+@newPassword = admin123!
+
+### Set this manually after login (or use cookie flow in tools like Bruno/Insomnia)
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMiIsInJvbGUiOiJ1c2VyIiwiaXNBY3RpdmUiOnRydWUsImlhdCI6MTc3Mjc3OTU4NSwiZXhwIjoxNzcyODY1OTg1fQ.fU-_islTBLRFy8i42uIkC-oSXVu5chkaSZR86YHY8Fg
+
+### -----------------------------
+### 1) Register user
+### -----------------------------
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+  "name": "{{name}}",
+  "email": "{{email}}",
+  "username": "{{username}}",
+  "password": "{{password}}",
+  "skills": ["typescript", "nodejs", "express"]
+}
+
+### -----------------------------
+### 2) Verify email
+### Paste token from verification email here
+### -----------------------------
+POST {{baseUrl}}/verify
+Content-Type: application/json
+
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMiIsImVtYWlsIjoidGJ0ZWNoOTQxZHNhaXRAZ21haWwuY29tIiwicHVycG9zZSI6ImVtYWlsX3ZlcmlmaWNhdGlvbiIsImlhdCI6MTc3Mjc3OTQ2NywiZXhwIjoxNzcyNzgxMjY3fQ.udHQC7P3uhRD_ElLBdiLOL6MjnyTN_BioeLAeb1Qnzg"
+}
+
+### -----------------------------
+### 3) Check username availability
+### -----------------------------
+GET {{baseUrl}}/check-username?username={{"tbtech941dsait"}}
+
+### -----------------------------
+### 4) Login (email or username in identifier)
+### Note: API sets token in cookie; token is not returned in JSON body
+### -----------------------------
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "identifier": "{{email}}",
+  "password": "{{newPassword}}"
+}
+
+### -----------------------------
+### 5) Get profile (protected)
+### Use Authorization header with JWT if needed
+### -----------------------------
+GET {{baseUrl}}/profile
+Authorization: Bearer {{authToken}}
+
+### -----------------------------
+### 6) Update profile (protected)
+### -----------------------------
+PATCH {{baseUrl}}/profile
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Talha Updated",
+  "skills": ["typescript", "postgres", "drizzle"]
+}
+
+### -----------------------------
+### 7) Change password (protected)
+### -----------------------------
+PUT {{baseUrl}}/update-password
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "oldPassword": "{{password}}",
+  "newPassword": "{{newPassword}}"
+}
+
+### -----------------------------
+### 8) Forgot password
+### -----------------------------
+POST {{baseUrl}}/forgot-password
+Content-Type: application/json
+
+{
+  "email": "{{email}}"
+}
+
+### -----------------------------
+### 9) Reset password
+### Paste token from reset email here
+### -----------------------------
+POST {{baseUrl}}/reset-password
+Content-Type: application/json
+
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMiIsImVtYWlsIjoidGJ0ZWNoOTQxZHNhaXRAZ21haWwuY29tIiwicHVycG9zZSI6InBhc3N3b3JkX3Jlc2V0IiwiaWF0IjoxNzcyNzc5NjMwLCJleHAiOjE3NzI3ODE0MzB9.NVNDbG0EustKoRscMWdVoarSKLqF4QG_1lYcK5bTZD0",
+  "newPassword": "{{password}}"
+}
+
+### -----------------------------
+### 10) Logout (protected)
+### -----------------------------
+POST {{baseUrl}}/logout
+Authorization: Bearer {{authToken}}

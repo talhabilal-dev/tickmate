@@ -1,0 +1,115 @@
+### TickMate backend admin route tests
+### Works with VS Code REST Client extension (.http files)
+### Install: Huachao Mao -> REST Client
+
+@baseUrl = http://localhost:3000/api/admin
+
+### Get admin JWT from /api/admin/login below
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMyIsInJvbGUiOiJhZG1pbiIsImlzQWN0aXZlIjp0cnVlLCJpYXQiOjE3NzI3OTE5OTksImV4cCI6MTc3MjgzNTE5OX0.QkToyhTmhHPK6komTPh3GAl5GytBCnrcsp4FqlFvrVQ
+@adminIdentifier = admin@mail.com
+@adminPassword = admin123!
+
+### IDs used by requests below
+@userId = 2
+@newUserEmail = created-by-admin@mail.com
+@newUsername = created_by_admin
+@moderatorUserId = 4
+
+### -----------------------------
+### 1) Admin login
+### -----------------------------
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "identifier": "{{adminIdentifier}}",
+  "password": "{{adminPassword}}"
+}
+
+### -----------------------------
+### 2) Create user (admin)
+### User created here is active=true by default in backend
+### -----------------------------
+POST {{baseUrl}}/create-user
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Created By Admin",
+  "username": "{{newUsername}}",
+  "email": "{{newUserEmail}}",
+  "password": "user12345",
+  "skills": ["typescript", "support"],
+  "role": "user"
+}
+
+### -----------------------------
+### 3) Create ticket (admin)
+### Must assign to moderator only, with manual helpfulNotes (no AI)
+### -----------------------------
+POST {{baseUrl}}/create-ticket
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "Manual assignment: production login issue",
+  "description": "Users intermittently fail to log in after deployment.",
+  "category": "Authentication",
+  "assignedTo": {{moderatorUserId}},
+  "helpfulNotes": "Check auth cookies, domain config, and token expiration settings.",
+  "priority": "high",
+  "relatedSkills": ["nodejs", "jwt", "cookies"]
+}
+
+### -----------------------------
+### 4) Get all users (admin)
+### -----------------------------
+GET {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+
+### -----------------------------
+### 5) Get all tickets (admin)
+### -----------------------------
+GET {{baseUrl}}/tickets
+Authorization: Bearer {{adminToken}}
+
+### -----------------------------
+### 6) Get admin dashboard (admin)
+### -----------------------------
+GET {{baseUrl}}/dashboard
+Authorization: Bearer {{adminToken}}
+
+### -----------------------------
+### 7) Update user (admin)
+### Accepts _id or userId
+### -----------------------------
+PUT {{baseUrl}}/update-user
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "userId": {{userId}},
+  "name": "Updated By Admin",
+  "username": "updated_admin_user",
+  "email": "updated-admin-user@mail.com",
+  "skills": ["typescript", "drizzle", "postgres"],
+  "role": "user",
+  "isActive": true
+}
+
+### -----------------------------
+### 8) Delete user (admin)
+### -----------------------------
+DELETE {{baseUrl}}/delete-user
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "userId": {{userId}}
+}
+
+### -----------------------------
+### 9) Admin logout
+### -----------------------------
+POST {{baseUrl}}/logout
+Authorization: Bearer {{adminToken}}
